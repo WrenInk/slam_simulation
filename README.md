@@ -179,12 +179,6 @@ chmod +x scripts/*.sh
 3. 执行 `colcon build --symlink-install` 编译 ROS 2 核心功能包（`FAST_LIO`, `livox_ros_driver2`, `nav_stack`）；
 4. 自动执行单元测试验证物理动力学与传感器链路。
 
-构建成功后将自动执行测试，终端看到以下输出即表示全部模块就绪：
-```text
-Summary: 3 packages finished
-3 passed in 1.82s
-```
-
 > [!NOTE]
 > 推荐使用 `--symlink-install` 选项来构建你的工作空间（`./scripts/build.sh` 脚本已内置该选项），因为 `slam_simulation` 广泛使用了 `launch.py` 文件和 YAML 配置文件。这个构建参数会为那些非编译的源文件使用符号链接，这意味着当你调整参数文件时，不需要反复重建，只需要重新启动即可。
 
@@ -208,14 +202,16 @@ Summary: 3 packages finished
     ```
     自动启动 MuJoCo 仿真底盘、纯 FAST-LIO2 算法（10 Hz 高频配准）、实时地图管理节点与 RViz2（青色为实时扫描点云，彩色为全局累积地图）。
   - **终端 2 启动全向键盘遥控**：
+    
     ```bash
     ./scripts/teleop.sh
     ```
   - **保存栅格与点云地图**：
     在终端 1 按 `Ctrl + C` 退出建图，系统将自动将当前全局点云写入 `maps/map.pcd`，同时自动转换为 2D 占据栅格地图 `maps/map.pgm` 与 `maps/map.yaml`。
     *(亦可随时使用 Nav2 命令行手动保存：`ros2 run nav2_map_server map_saver_cli -f maps/<YOUR_MAP_NAME>`)*
-
+  
 - **导航模式 (Navigation Mode)**：
+  
   - **终端启动先验地图 ICP 重定位与 Nav2 自主导航**：
     ```bash
     ./scripts/navigation.sh
@@ -261,7 +257,7 @@ Summary: 3 packages finished
   ```bash
   # 查看默认建图结果 maps/map.pcd
   ./scripts/view_pcd.sh
-
+  
   # 查看指定路径的 PCD 点云
   ./scripts/view_pcd.sh path/to/any_map.pcd
   ```
@@ -375,6 +371,7 @@ python3 scripts/pcd_to_grid.py [--pcd <路径>] [--output-dir <路径>] [--resol
 ### 3.6 键盘遥控参数 (`teleop.sh`)
 
 **指令语法**：
+
 ```bash
 ./scripts/teleop.sh [--ros-args -p default_gear:=<1/2/3>]
 ```
@@ -395,30 +392,3 @@ python3 scripts/pcd_to_grid.py [--pcd <路径>] [--output-dir <路径>] [--resol
 4. **Nav2 (Navigation 2)** (Apache-2.0)：官方自主导航框架，使用 SmacPlanner2D 与 MPPI Omni 控制器；
 5. **MuJoCo** (Apache-2.0)：Google DeepMind 开源物理引擎，负责麦轮牵引力与非重复激光射线扫描仿真。
 
----
-
-## 5. Troubleshooting & FAQ
-
-#### Q1: 运行图形界面时报错 `GLSL link warning` 或出现黑屏？
-* **原因**：部分双显卡笔记本（或虚拟机/Wayland 环境）OpenGL 硬件加速兼容性问题。
-* **解决办法**：指定使用软件渲染即可正常启动：
-  ```bash
-  export LIBGL_ALWAYS_SOFTWARE=1
-  ./scripts/mapping.sh
-  ```
-
-#### Q2: 提示 `ModuleNotFoundError: No module named 'mujoco'` 或找不到包？
-* **原因**：在未加载虚拟环境的系统原生 Python 下直接运行了脚本。
-* **解决办法**：在当前终端执行 `source scripts/env.sh`，或者直接运行项目提供的 `./scripts/xxx.sh` 快捷脚本（脚本内部会自动注入虚拟环境）。
-
-#### Q3: 为什么导航模式下机器人在接收到目标后不走动？
-* **检查点 A**：观察 RViz 顶部面板中的 Nav2 状态。Nav2 启动后需要约 4~6 秒激活生命周期节点（Lifecycle），**必须等待出现 `Navigation: active` 后再点击 `Nav2 Goal`**；
-* **检查点 B**：目标点是否点选在黑色障碍物或膨胀层内，可尝试在白色开阔可行走区域重新下发目标。
-
-#### Q4: 多台机器在同一局域网下出现 ROS 2 话题互相干扰？
-* **说明**：[`scripts/env.sh`](file:///home/xiaocheng/slam_study/scripts/env.sh) 默认配置了网络隔离：
-  ```bash
-  export ROS_DOMAIN_ID=77
-  export ROS_LOCALHOST_ONLY=1
-  ```
-  默认情况下外部机器无法接收本机的仿真话题。若需要局域网跨机器分布式通信，只需将 `ROS_LOCALHOST_ONLY` 改为 `0` 并统一 `ROS_DOMAIN_ID` 即可。
