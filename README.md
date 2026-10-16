@@ -17,17 +17,13 @@
   - [1.4 路径规划与全向控制](#14-路径规划与全向控制)
   - [1.5 仓库文件结构](#15-仓库文件结构)
 - [2. Quick Start (快速上手)](#2-quick-start)
-  - [2.1 Option 1: Docker](#21-option-1-docker)
-    - [2.1.1 Setup Environment](#211-setup-environment)
-    - [2.1.2 Create Container](#212-create-container)
-  - [2.2 Option 2: Build From Source](#22-option-2-build-from-source)
-    - [2.2.1 Setup Environment](#221-setup-environment)
-    - [2.2.2 Create Workspace](#222-create-workspace)
-    - [2.2.3 Build](#223-build)
-  - [2.3 Running](#23-running)
-    - [2.3.1 仿真运行模式](#231-仿真运行模式)
-    - [2.3.2 全向键盘遥控操作](#232-全向键盘遥控操作)
-    - [2.3.3 自动化测试与辅助工具](#233-自动化测试与辅助工具)
+  - [2.1 环境要求 (Setup Environment)](#21-环境要求-setup-environment)
+  - [2.2 获取源码 (Create Workspace)](#22-获取源码-create-workspace)
+  - [2.3 一键构建 (Build)](#23-一键构建-build)
+  - [2.4 运行操作 (Running)](#24-运行操作-running)
+    - [2.4.1 仿真运行模式](#241-仿真运行模式)
+    - [2.4.2 全向键盘遥控操作](#242-全向键盘遥控操作)
+    - [2.4.3 自动化测试与辅助工具](#243-自动化测试与辅助工具)
 - [3. Launch & Script Arguments (完整参数字典)](#3-launch--script-arguments)
   - [3.1 建图脚本参数 (`mapping.sh`)](#31-建图脚本参数-mappingsh)
   - [3.2 导航脚本参数 (`navigation.sh`)](#32-导航脚本参数-navigationsh)
@@ -137,49 +133,12 @@ Livox Mid-360 采用独特的非重复环形扫描结构：
 
 ## 2. Quick Start
 
-### 2.1 Option 1: Docker
-
-#### 2.1.1 Setup Environment
-- 安装 [Docker](https://docs.docker.com/engine/install/)
-- 允许 Docker Container 访问宿主机 X11 显示：
-  ```bash
-  xhost +local:docker
-  ```
-
-#### 2.1.2 Create Container
-运行 Docker 容器（预构建镜像）：
-```bash
-docker run -it --rm --name slam_simulation \
-  --network host \
-  --privileged \
-  -e "DISPLAY=$DISPLAY" \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v /dev:/dev \
-  ghcr.io/wrenink/slam_simulation:latest
-```
-
-> **本地构建镜像（可选）**：
-> 若从源码构建 Docker 镜像，可在项目根目录下运行：
-> ```bash
-> docker build -t slam_simulation:latest .
-> docker run -it --rm --name slam_simulation \
->   --network host \
->   --privileged \
->   -e "DISPLAY=$DISPLAY" \
->   -v /tmp/.X11-unix:/tmp/.X11-unix \
->   -v /dev:/dev \
->   slam_simulation:latest
-> ```
-
----
-
-### 2.2 Option 2: Build From Source
-
-#### 2.2.1 Setup Environment
-- **操作系统**：Ubuntu 22.04 LTS
-- **ROS**：[ROS 2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
-- **Python**：Python 3.10
+### 2.1 环境要求 (Setup Environment)
+- **操作系统**：Ubuntu 22.04 LTS (x86_64)
+- **ROS 版本**：[ROS 2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html) (Desktop 桌面版)
+- **Python 版本**：Python 3.10+
 - **安装系统与 ROS 2 依赖**：
+  在终端中运行以下命令安装 C++ 编译工具链、PCL 点云开发库以及 Nav2 导航栈等依赖项：
   ```bash
   sudo apt update && sudo apt install -y \
     build-essential cmake git python3-colcon-common-extensions \
@@ -189,26 +148,33 @@ docker run -it --rm --name slam_simulation \
     ros-humble-sensor-msgs-py ros-humble-tf2-ros-py
   ```
 
-#### 2.2.2 Create Workspace
-创建/克隆工作空间并进入目录：
+### 2.2 获取源码 (Create Workspace)
+克隆本项目源码并进入仓库根目录：
+
 ```bash
 git clone https://github.com/WrenInk/slam_simulation.git
 cd slam_simulation
 ```
 
-**下载先验点云**：
-先验点云用于 ICP 全局多角度重定位与 Nav2 代价地图基准。
-本项目已在 `maps/` 目录下内置了默认仿真场景的先验点云与栅格地图（`map.pcd`、`map.pgm` 与 `map.yaml`），开箱即用，无需额外前往网盘下载即可直接进行导航。
-在建图模式下退出时，亦会自动将当前全局累积点云导出并转换覆盖到 `maps/` 目录。
+> [!NOTE]
+> - **先验点云与地图**：本项目已在 `maps/` 目录下内置了默认仿真场景的先验点云与 2D 占据栅格地图（`map.pcd`、`map.pgm` 与 `map.yaml`），开箱即用，无需额外前往网盘下载即可直接开启导航。
+> - **第三方算法与驱动**：本仓库已内置适配好的 FAST-LIO2、Livox-SDK2 与大疆官方驱动源码，克隆后无需额外递归拉取子模块或手动打补丁。
 
-#### 2.2.3 Build
-运行项目内置的一键构建脚本：
+### 2.3 一键构建 (Build)
+赋予脚本执行权限并运行项目内置的一键编译脚本：
+
 ```bash
 chmod +x scripts/*.sh
 ./scripts/build.sh
 ```
 
-构建成功后将自动执行单元测试验证物理仿真与算法逻辑，看到以下输出即表示完成：
+构建脚本会自动完成：
+1. 创建专属的 Python 隔离虚拟环境（`.venv/`），并安装所需的科学计算依赖（`mujoco==3.3.7`, `open3d==0.19.0`, `gtsam==4.2` 等）；
+2. 编译并本地安装 C++ `Livox-SDK2` 驱动库至 `.deps/`；
+3. 执行 `colcon build --symlink-install` 编译 ROS 2 核心功能包（`FAST_LIO`, `livox_ros_driver2`, `nav_stack`）；
+4. 自动执行单元测试验证物理动力学与传感器链路。
+
+构建成功后将自动执行测试，终端看到以下输出即表示全部模块就绪：
 ```text
 Summary: 3 packages finished
 3 passed in 1.82s
@@ -219,12 +185,12 @@ Summary: 3 packages finished
 
 ---
 
-### 2.3 Running
+### 2.4 运行操作 (Running)
 
 可使用以下命令启动，在 RViz 中使用 `Nav2 Goal` 插件发布目标点。
 所有启动脚本均已内置环境加载逻辑（自动导入 ROS 2 与本地工作空间配置）。
 
-#### 2.3.1 仿真运行模式
+#### 2.4.1 仿真运行模式
 
 **单机器人：**
 
@@ -253,7 +219,7 @@ Summary: 3 packages finished
     ```
     等待终端提示 `Navigation: active` 并在 RViz 中看到先验点云与栅格地图后，点击 RViz 顶栏的 **`Nav2 Goal`** 并在地图可行走区域点击拖出目标位姿箭头，全向麦轮底盘即可平滑避障抵达目标。
 
-#### 2.3.2 全向键盘遥控操作
+#### 2.4.2 全向键盘遥控操作
 
 专门针对四轮麦克纳姆轮底盘设计的全向控制程序：
 
@@ -272,7 +238,7 @@ Summary: 3 packages finished
 | **`I` / `M`** | 微调角速度 | 每次增减 10% 转向角速度 |
 | **`Tab`** | 模式切换 | 在**按住保持模式**（松开停车）与**巡航锁定模式**（松手保持当前速度）之间切换 |
 
-#### 2.3.3 自动化测试与辅助工具
+#### 2.4.3 自动化测试与辅助工具
 
 - **自动化无头导航验收 (Headless Test)**：
   ```bash
