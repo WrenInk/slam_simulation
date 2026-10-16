@@ -149,9 +149,14 @@ Livox Mid-360 采用独特的非重复环形扫描结构：
   ```
 
 ### 2.2 获取源码 (Create Workspace)
-克隆本项目源码并进入仓库根目录：
+创建工作空间目录并克隆项目源码：
 
 ```bash
+# 创建并进入工作目录（例如 ~/ros_ws）
+mkdir -p ~/ros_ws
+cd ~/ros_ws
+
+# 克隆仓库并进入项目主目录
 git clone https://github.com/WrenInk/slam_simulation.git
 cd slam_simulation
 ```
