@@ -1,0 +1,143 @@
+diff --git a/src/laserMapping.cpp b/src/laserMapping.cpp
+index e5d9950..8d3e02d 100644
+--- a/src/laserMapping.cpp
++++ b/src/laserMapping.cpp
+@@ -136,6 +136,8 @@ state_ikfom state_point;
+ vect3 pos_lid;
+ 
+ nav_msgs::msg::Path path;
++std::string odom_frame = "odom", body_frame = "imu_link";
++bool publish_tf = false;
+ nav_msgs::msg::Odometry odomAftMapped;
+ geometry_msgs::msg::Quaternion geoQuat;
+ geometry_msgs::msg::PoseStamped msg_body_pose;
+@@ -143,14 +145,6 @@ geometry_msgs::msg::PoseStamped msg_body_pose;
+ shared_ptr<Preprocess> p_pre(new Preprocess());
+ shared_ptr<ImuProcess> p_imu(new ImuProcess());
+ 
+-void SigHandle(int sig)
+-{
+-    flg_exit = true;
+-    std::cout << "catch sig %d" << sig << std::endl;
+-    sig_buffer.notify_all();
+-    rclcpp::shutdown();
+-}
+-
+ inline void dump_lio_state_to_log(FILE *fp)  
+ {
+     V3D rot_ang(Log(state_point.rot.toRotationMatrix()));
+@@ -505,7 +499,7 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
+         pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
+         // laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
+         laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
+-        laserCloudmsg.header.frame_id = "camera_init";
++        laserCloudmsg.header.frame_id = odom_frame;
+         pubLaserCloudFull->publish(laserCloudmsg);
+         publish_count -= PUBFRAME_PERIOD;
+     }
+@@ -557,7 +551,7 @@ void publish_frame_body(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Shared
+     sensor_msgs::msg::PointCloud2 laserCloudmsg;
+     pcl::toROSMsg(*laserCloudIMUBody, laserCloudmsg);
+     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
+-    laserCloudmsg.header.frame_id = "body";
++    laserCloudmsg.header.frame_id = body_frame;
+     pubLaserCloudFull_body->publish(laserCloudmsg);
+     publish_count -= PUBFRAME_PERIOD;
+ }
+@@ -574,7 +568,7 @@ void publish_effect_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Shar
+     sensor_msgs::msg::PointCloud2 laserCloudFullRes3;
+     pcl::toROSMsg(*laserCloudWorld, laserCloudFullRes3);
+     laserCloudFullRes3.header.stamp = get_ros_time(lidar_end_time);
+-    laserCloudFullRes3.header.frame_id = "camera_init";
++    laserCloudFullRes3.header.frame_id = odom_frame;
+     pubLaserCloudEffect->publish(laserCloudFullRes3);
+ }
+ 
+@@ -596,13 +590,13 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
+     pcl::toROSMsg(*pcl_wait_pub, laserCloudmsg);
+     // laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
+     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
+-    laserCloudmsg.header.frame_id = "camera_init";
++    laserCloudmsg.header.frame_id = odom_frame;
+     pubLaserCloudMap->publish(laserCloudmsg);
+ 
+     // sensor_msgs::msg::PointCloud2 laserCloudMap;
+     // pcl::toROSMsg(*featsFromMap, laserCloudMap);
+     // laserCloudMap.header.stamp = get_ros_time(lidar_end_time);
+-    // laserCloudMap.header.frame_id = "camera_init";
++    // laserCloudMap.header.frame_id = odom_frame;
+     // pubLaserCloudMap->publish(laserCloudMap);
+ }
+ 
+@@ -627,11 +621,10 @@ void set_posestamp(T & out)
+ 
+ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubOdomAftMapped, std::unique_ptr<tf2_ros::TransformBroadcaster> & tf_br)
+ {
+-    odomAftMapped.header.frame_id = "camera_init";
+-    odomAftMapped.child_frame_id = "body";
++    odomAftMapped.header.frame_id = odom_frame;
++    odomAftMapped.child_frame_id = body_frame;
+     odomAftMapped.header.stamp = get_ros_time(lidar_end_time);
+     set_posestamp(odomAftMapped.pose);
+-    pubOdomAftMapped->publish(odomAftMapped);
+     auto P = kf.get_P();
+     for (int i = 0; i < 6; i ++)
+     {
+@@ -645,8 +638,8 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
+     }
+ 
+     geometry_msgs::msg::TransformStamped trans;
+-    trans.header.frame_id = "camera_init";
+-    trans.child_frame_id = "body";
++    trans.header.frame_id = odom_frame;
++    trans.child_frame_id = body_frame;
+     trans.header.stamp = get_ros_time(lidar_end_time);
+     trans.transform.translation.x = odomAftMapped.pose.pose.position.x;
+     trans.transform.translation.y = odomAftMapped.pose.pose.position.y;
+@@ -655,14 +648,15 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
+     trans.transform.rotation.x = odomAftMapped.pose.pose.orientation.x;
+     trans.transform.rotation.y = odomAftMapped.pose.pose.orientation.y;
+     trans.transform.rotation.z = odomAftMapped.pose.pose.orientation.z;
+-    tf_br->sendTransform(trans);
++    pubOdomAftMapped->publish(odomAftMapped);
++    if (publish_tf) tf_br->sendTransform(trans);
+ }
+ 
+ void publish_path(rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pubPath)
+ {
+     set_posestamp(msg_body_pose);
+     msg_body_pose.header.stamp = get_ros_time(lidar_end_time); // ros::Time().fromSec(lidar_end_time);
+-    msg_body_pose.header.frame_id = "camera_init";
++    msg_body_pose.header.frame_id = odom_frame;
+ 
+     /*** if path is too large, the rvis will crash ***/
+     static int jjj = 0;
+@@ -798,6 +792,9 @@ class LaserMappingNode : public rclcpp::Node
+ public:
+     LaserMappingNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions()) : Node("laser_mapping", options)
+     {
++        odom_frame = this->declare_parameter<std::string>("frames.odom", "odom");
++        body_frame = this->declare_parameter<std::string>("frames.body", "imu_link");
++        publish_tf = this->declare_parameter<bool>("publish.tf_en", false);
+         this->declare_parameter<bool>("publish.path_en", true);
+         this->declare_parameter<bool>("publish.effect_map_en", false);
+         this->declare_parameter<bool>("publish.map_en", false);
+@@ -873,7 +870,7 @@ public:
+         RCLCPP_INFO(this->get_logger(), "p_pre->lidar_type %d", p_pre->lidar_type);
+ 
+         path.header.stamp = this->get_clock()->now();
+-        path.header.frame_id ="camera_init";
++        path.header.frame_id =odom_frame;
+ 
+         // /*** variables definition ***/
+         // int effect_feat_num = 0, frame_num = 0;
+@@ -1158,7 +1155,8 @@ int main(int argc, char** argv)
+ {
+     rclcpp::init(argc, argv);
+ 
+-    signal(SIGINT, SigHandle);
++    // rclcpp::init installs a deferred signal handler. Calling shutdown()
++    // directly inside a POSIX handler can deadlock when SIGINT interrupts DDS.
+ 
+     rclcpp::spin(std::make_shared<LaserMappingNode>());
+ 

@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="MID360 Mecanum - 10m x 10m obstacle arena">
+  <compiler angle="radian" />
+  <option timestep=".001" integrator="implicitfast" cone="elliptic" />
+  <visual>
+    <global offwidth="1280" offheight="800" />
+    <headlight ambient=".4 .4 .4" diffuse=".7 .7 .7" />
+  </visual>
+  <asset>
+    <texture name="floor_grid" type="2d" builtin="checker" rgb1=".69 .74 .76" rgb2=".76 .80 .81" width="512" height="512" />
+    <material name="floor_grid" texture="floor_grid" texrepeat="10 10" reflectance=".04" />
+    <texture name="sky" type="skybox" builtin="gradient" rgb1=".15 .19 .24" rgb2=".4 .48 .55" width="256" height="1536" />
+  </asset>
+  <worldbody>
+    <light pos="0 -3 7" dir="0 .3 -1" directional="true" />
+    <geom name="floor" type="box" pos="0 0 -.05" size="5.12 5.12 .05" material="floor_grid" />
+    <geom name="wall_west" type="box" pos="-5.06 0 0.5" size="0.06 5.12 0.5" rgba=".40 .46 .50 1" />
+    <geom name="wall_east" type="box" pos="5.06 0 0.5" size="0.06 5.12 0.5" rgba=".40 .46 .50 1" />
+    <geom name="wall_south" type="box" pos="0 -5.06 0.5" size="5 0.06 0.5" rgba=".40 .46 .50 1" />
+    <geom name="wall_north" type="box" pos="0 5.06 0.5" size="5 0.06 0.5" rgba=".40 .46 .50 1" />
+    <geom name="crate_a" type="box" pos="-1.5 -2.2 0.425" size="0.45 0.45 0.425" rgba="0.88 0.48 0.15 1" />
+    <geom name="crate_b" type="box" pos="2 -0.6 0.5" size="0.5 0.6 0.5" rgba="0.18 0.48 0.66 1" />
+    <geom name="crate_c" type="box" pos="2.7 -3.4 0.275" size="0.4 0.325 0.275" rgba="0.88 0.48 0.15 1" />
+    <geom name="divider" type="box" pos="-1 1.5 0.55" size="0.09 0.9 0.55" rgba="0.34 0.4 0.45 1" />
+    <geom name="north_rack" type="box" pos="0.9 3.4 0.375" size="0.9 0.275 0.375" rgba="0.18 0.48 0.66 1" />
+    <geom name="pillar_west" type="cylinder" pos="-3.2 2.4 0.55" size="0.35 0.55" rgba="0.65 0.35 0.19 1" />
+    <geom name="pillar_east" type="cylinder" pos="3.4 2.1 0.45" size="0.4 0.45" rgba="0.65 0.35 0.19 1" />
+    <geom name="start" type="box" pos="-3.8 -3.8 0.001" size=".35 .35 .001" rgba=".15 .6 .3 1" contype="0" conaffinity="0" group="2" />
+    <geom name="goal_pad" type="box" pos="3.7 3.7 0.001" size=".35 .35 .001" rgba=".2 .5 .8 1" contype="0" conaffinity="0" group="2" />
+  </worldbody>
+</mujoco>

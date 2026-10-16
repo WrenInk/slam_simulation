@@ -1,0 +1,22 @@
+{
+  "src/FAST_LIO": {
+    "url": "https://github.com/hku-mars/FAST_LIO.git",
+    "commit": "a4743b095409588842a5b30ddfa27e29d2f99164"
+  },
+  "src/livox_ros_driver2": {
+    "url": "https://github.com/Livox-SDK/livox_ros_driver2.git",
+    "commit": "21445540f0d100dc86a7e6df312dd70bbdb4afdf"
+  },
+  "third_party/Livox-SDK2": {
+    "url": "https://github.com/Livox-SDK/Livox-SDK2.git",
+    "commit": "c0796f04c143143899c87a773d9f6b7136453c0b"
+  },
+  "third_party/livox_laser_simulation": {
+    "url": "https://github.com/Livox-SDK/livox_laser_simulation.git",
+    "commit": "1cce1073633a062b92e30243a4c2920e45551bb5"
+  },
+  "third_party/mid360_official": {
+    "url": "https://terra-1-g.djicdn.com/65c028cd298f4669a7f0e40e50ba1131/Mid360/mid-360-asm.stp",
+    "sha256": "b93e9b51282ed319b6aa755e76a132c0eb03306da5f3b9676bcabf2e2ae25f02"
+  }
+}

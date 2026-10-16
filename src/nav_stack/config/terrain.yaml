@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    terrain_resolution: 0.10
+    max_slope_degrees: 20.0
+    max_step_height: 0.065
+    max_roughness: 0.035
+    ground_fill_distance: 0.12
+    surface_layer_gap: 0.04

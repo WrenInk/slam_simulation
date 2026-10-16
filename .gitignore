@@ -1,0 +1,13 @@
+.venv/
+.deps/
+build/
+install/
+log/
+artifacts/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+MUJOCO_LOG.TXT
+*.log
+.DS_Store

@@ -1,0 +1,591 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="mid360_mecanum">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0.08" />
+      <mass value="8.0" />
+      <inertia ixx="0.1" iyy="0.16" izz="0.22" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.08" rpy="0 0 0" />
+      <geometry>
+        <box size="0.42 0.32 0.06" />
+      </geometry>
+      <material name="paint_base_link_2">
+        <color rgba="0.1 0.27 0.36 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.08" rpy="0 0 0" />
+      <geometry>
+        <box size="0.42 0.32 0.06" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0.115" rpy="0 0 0" />
+      <geometry>
+        <box size="0.37 0.29 0.01" />
+      </geometry>
+      <material name="paint_base_link_4">
+        <color rgba="0.72 0.79 0.82 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.15 0 0.124" rpy="0 0 0" />
+      <geometry>
+        <box size="0.085 0.08 0.008" />
+      </geometry>
+      <material name="paint_base_link_5">
+        <color rgba="1 0.45 0.08 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.08 0 0.124" rpy="0 0 0" />
+      <geometry>
+        <box size="0.12 0.035 0.008" />
+      </geometry>
+      <material name="paint_base_link_6">
+        <color rgba="1 0.45 0.08 1" />
+      </material>
+    </visual>
+  </link>
+  <link name="sensor_mast">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.05" />
+      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.018" length="0.04" />
+      </geometry>
+      <material name="paint_sensor_mast_2">
+        <color rgba="0.18 0.21 0.24 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="mast_mount" type="fixed">
+    <parent link="base_link" />
+    <child link="sensor_mast" />
+    <origin xyz="0 0 0.13" rpy="0 0 0" />
+  </joint>
+  <link name="imu_link">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="imu_mount" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0 0 0.15" rpy="0 0 0" />
+  </joint>
+  <link name="lidar_link">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.265" />
+      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0" />
+      <geometry>
+        <mesh filename="package://nav_stack/meshes/mid360_housing.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="mid360_housing">
+        <color rgba="0.32 0.35 0.38 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.57079632679 0 0" />
+      <geometry>
+        <mesh filename="package://nav_stack/meshes/mid360_dome.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="mid360_dome">
+        <color rgba="0.055 0.06 0.065 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="lidar_mount" type="fixed">
+    <parent link="imu_link" />
+    <child link="lidar_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="front_left_wheel">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.3" />
+      <inertia ixx="0.0006" iyy="0.001" izz="0.0006" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+      <material name="paint_front_left_wheel_2">
+        <color rgba="0.035 0.04 0.05 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.067 0 0" rpy="0.78539816 0 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_4">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 0.039381612" rpy="0.78539816 -0.62831853 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_5">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 0.063720787" rpy="0.78539816 -1.2566371 5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_6">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 0.063720787" rpy="-2.3561945 -1.2566371 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_7">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 0.039381612" rpy="-2.3561945 -0.62831853 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_8">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.067 0 8.2051336e-18" rpy="-2.3561945 0 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_9">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 -0.039381612" rpy="-2.3561945 0.62831853 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_10">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 -0.063720787" rpy="-2.3561945 1.2566371 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_11">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 -0.063720787" rpy="0.78539816 1.2566371 2.220446e-16" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_12">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 -0.039381612" rpy="0.78539816 0.62831853 -5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_left_wheel_13">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="front_left_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="front_left_wheel" />
+    <origin xyz="0.165 0.19 0.075" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="2" velocity="15" />
+  </joint>
+  <link name="front_right_wheel">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.3" />
+      <inertia ixx="0.0006" iyy="0.001" izz="0.0006" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+      <material name="paint_front_right_wheel_2">
+        <color rgba="0.035 0.04 0.05 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.067 0 0" rpy="-0.78539816 0 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_4">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 0.039381612" rpy="-0.78539816 -0.62831853 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_5">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 0.063720787" rpy="-0.78539816 -1.2566371 -5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_6">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 0.063720787" rpy="2.3561945 -1.2566371 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_7">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 0.039381612" rpy="2.3561945 -0.62831853 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_8">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.067 0 8.2051336e-18" rpy="2.3561945 0 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_9">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 -0.039381612" rpy="2.3561945 0.62831853 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_10">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 -0.063720787" rpy="2.3561945 1.2566371 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_11">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 -0.063720787" rpy="-0.78539816 1.2566371 -2.220446e-16" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_12">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 -0.039381612" rpy="-0.78539816 0.62831853 5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_front_right_wheel_13">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="front_right_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="front_right_wheel" />
+    <origin xyz="0.165 -0.19 0.075" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="2" velocity="15" />
+  </joint>
+  <link name="rear_left_wheel">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.3" />
+      <inertia ixx="0.0006" iyy="0.001" izz="0.0006" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+      <material name="paint_rear_left_wheel_2">
+        <color rgba="0.035 0.04 0.05 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.067 0 0" rpy="-0.78539816 0 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_4">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 0.039381612" rpy="-0.78539816 -0.62831853 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_5">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 0.063720787" rpy="-0.78539816 -1.2566371 -5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_6">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 0.063720787" rpy="2.3561945 -1.2566371 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_7">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 0.039381612" rpy="2.3561945 -0.62831853 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_8">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.067 0 8.2051336e-18" rpy="2.3561945 0 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_9">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 -0.039381612" rpy="2.3561945 0.62831853 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_10">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 -0.063720787" rpy="2.3561945 1.2566371 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_11">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 -0.063720787" rpy="-0.78539816 1.2566371 -2.220446e-16" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_12">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 -0.039381612" rpy="-0.78539816 0.62831853 5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_left_wheel_13">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="rear_left_wheel" />
+    <origin xyz="-0.165 0.19 0.075" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="2" velocity="15" />
+  </joint>
+  <link name="rear_right_wheel">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.3" />
+      <inertia ixx="0.0006" iyy="0.001" izz="0.0006" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+      <material name="paint_rear_right_wheel_2">
+        <color rgba="0.035 0.04 0.05 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707963 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.045" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.067 0 0" rpy="0.78539816 0 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_4">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 0.039381612" rpy="0.78539816 -0.62831853 0" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_5">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 0.063720787" rpy="0.78539816 -1.2566371 5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_6">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 0.063720787" rpy="-2.3561945 -1.2566371 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_7">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 0.039381612" rpy="-2.3561945 -0.62831853 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_8">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.067 0 8.2051336e-18" rpy="-2.3561945 0 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_9">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.054204139 0 -0.039381612" rpy="-2.3561945 0.62831853 -3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_10">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.020704139 0 -0.063720787" rpy="-2.3561945 1.2566371 3.1415927" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_11">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.020704139 0 -0.063720787" rpy="0.78539816 1.2566371 2.220446e-16" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_12">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.054204139 0 -0.039381612" rpy="0.78539816 0.62831853 -5.5511151e-17" />
+      <geometry>
+        <cylinder radius="0.01" length="0.036" />
+      </geometry>
+      <material name="paint_rear_right_wheel_13">
+        <color rgba="0.45 0.49 0.52 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="rear_right_wheel" />
+    <origin xyz="-0.165 -0.19 0.075" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="2" velocity="15" />
+  </joint>
+</robot>

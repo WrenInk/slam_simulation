@@ -1,0 +1,11 @@
+# Coordinates are scene/world coordinates. These are never supplied to SLAM.
+interior_size: [10.0, 10.0]
+spawn: [-3.8, -3.8, 0.0]
+obstacles:
+  - {name: crate_a, shape: box, xy: [-1.5, -2.2], size: [0.9, 0.9, 0.85], color: [0.88, 0.48, 0.15, 1]}
+  - {name: crate_b, shape: box, xy: [2.0, -0.6], size: [1.0, 1.2, 1.0], color: [0.18, 0.48, 0.66, 1]}
+  - {name: crate_c, shape: box, xy: [2.7, -3.4], size: [0.8, 0.65, 0.55], color: [0.88, 0.48, 0.15, 1]}
+  - {name: divider, shape: box, xy: [-1.0, 1.5], size: [0.18, 1.8, 1.1], color: [0.34, 0.40, 0.45, 1]}
+  - {name: north_rack, shape: box, xy: [0.9, 3.4], size: [1.8, 0.55, 0.75], color: [0.18, 0.48, 0.66, 1]}
+  - {name: pillar_west, shape: cylinder, xy: [-3.2, 2.4], radius: 0.35, height: 1.1, color: [0.65, 0.35, 0.19, 1]}
+  - {name: pillar_east, shape: cylinder, xy: [3.4, 2.1], radius: 0.4, height: 0.9, color: [0.65, 0.35, 0.19, 1]}
