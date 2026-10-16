@@ -16,28 +16,27 @@
   - [1.3 激光雷达视场角与盲区设计](#13-激光雷达视场角与盲区设计)
   - [1.4 路径规划与全向控制](#14-路径规划与全向控制)
   - [1.5 仓库文件结构](#15-仓库文件结构)
-- [2. Quick Start (从 GitHub 部署与快速上手)](#2-quick-start)
-  - [2.1 环境要求 (Requirements)](#21-环境要求-requirements)
-  - [2.2 系统与 ROS 2 依赖安装 (System Dependencies)](#22-系统与-ros-2-依赖安装-system-dependencies)
-  - [2.3 克隆代码仓库 (Clone Repository)](#23-克隆代码仓库-clone-repository)
-  - [2.4 一键构建工作空间 (Build Workspace)](#24-一键构建工作空间-build-workspace)
-  - [2.5 快速运行验证 (Quick Verification)](#25-快速运行验证-quick-verification)
-- [3. Running (运行模式与操作流程)](#3-running)
-  - [3.1 纯 FAST-LIO2 建图模式 (Mapping Mode)](#31-纯-fast-lio2-建图模式-mapping-mode)
-  - [3.2 全向键盘遥控 (Teleop Keyboard)](#32-全向键盘遥控-teleop-keyboard)
-  - [3.3 先验 PCD 地图自主导航 (Prior Map Navigation)](#33-先验-pcd-地图自主导航-prior-map-navigation)
-  - [3.4 手动重定位演示模式 (Manual Relocalization Demo)](#34-手动重定位演示模式-manual-relocalization-demo)
-  - [3.5 交互式 3D PCD 点云查看器 (PCD Viewer)](#35-交互式-3d-pcd-点云查看器-pcd-viewer)
-  - [3.6 离线 PCD 转 2D 栅格地图工具 (PCD to Grid)](#36-离线-pcd-转-2d-栅格地图工具-pcd-to-grid)
-- [4. Launch & Script Arguments (完整参数字典)](#4-launch--script-arguments)
-  - [4.1 建图脚本参数 (`mapping.sh`)](#41-建图脚本参数-mappingsh)
-  - [4.2 导航脚本参数 (`navigation.sh`)](#42-导航脚本参数-navigationsh)
-  - [4.3 手动重定位脚本参数 (`relocalize.sh`)](#43-手动重定位脚本参数-relocalizesh)
-  - [4.4 点云查看器参数 (`view_pcd.sh`)](#44-点云查看器参数-view_pcdsh)
-  - [4.5 离线栅格转换参数 (`pcd_to_grid.py`)](#45-离线栅格转换参数-pcd_to_gridpy)
-  - [4.6 键盘遥控参数 (`teleop.sh`)](#46-键盘遥控参数-teleopsh)
-- [5. Third-Party Code & Licensing (第三方开源依赖)](#5-third-party-code--licensing)
-- [6. Troubleshooting & FAQ (补充调试指南)](#6-troubleshooting--faq)
+- [2. Quick Start (快速上手)](#2-quick-start)
+  - [2.1 Option 1: Docker](#21-option-1-docker)
+    - [2.1.1 Setup Environment](#211-setup-environment)
+    - [2.1.2 Create Container](#212-create-container)
+  - [2.2 Option 2: Build From Source](#22-option-2-build-from-source)
+    - [2.2.1 Setup Environment](#221-setup-environment)
+    - [2.2.2 Create Workspace](#222-create-workspace)
+    - [2.2.3 Build](#223-build)
+  - [2.3 Running](#23-running)
+    - [2.3.1 仿真运行模式](#231-仿真运行模式)
+    - [2.3.2 全向键盘遥控操作](#232-全向键盘遥控操作)
+    - [2.3.3 自动化测试与辅助工具](#233-自动化测试与辅助工具)
+- [3. Launch & Script Arguments (完整参数字典)](#3-launch--script-arguments)
+  - [3.1 建图脚本参数 (`mapping.sh`)](#31-建图脚本参数-mappingsh)
+  - [3.2 导航脚本参数 (`navigation.sh`)](#32-导航脚本参数-navigationsh)
+  - [3.3 手动重定位脚本参数 (`relocalize.sh`)](#33-手动重定位脚本参数-relocalizesh)
+  - [3.4 点云查看器参数 (`view_pcd.sh`)](#34-点云查看器参数-view_pcdsh)
+  - [3.5 离线栅格转换参数 (`pcd_to_grid.py`)](#35-离线栅格转换参数-pcd_to_gridpy)
+  - [3.6 键盘遥控参数 (`teleop.sh`)](#36-键盘遥控参数-teleopsh)
+- [4. Third-Party Code & Licensing (第三方开源依赖)](#4-third-party-code--licensing)
+- [5. Troubleshooting & FAQ (补充调试指南)](#5-troubleshooting--faq)
 
 ---
 
@@ -138,110 +137,123 @@ Livox Mid-360 采用独特的非重复环形扫描结构：
 
 ## 2. Quick Start
 
-### 2.1 环境要求 (Requirements)
-- **操作系统**：Ubuntu 22.04 LTS (x86_64)
-- **ROS 版本**：ROS 2 Humble Desktop（如未安装，可参照 [ROS 2 官方安装指南](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html) 进行配置）
-- **Python 版本**：Python 3.10
-- **硬件与显卡**：建议配备支持 OpenGL 3.3+ 的独立或集成显卡（供 MuJoCo 物理仿真渲染与 RViz2 显示使用）
+### 2.1 Option 1: Docker
 
-### 2.2 系统与 ROS 2 依赖安装 (System Dependencies)
-在 Ubuntu 22.04 系统终端中，运行以下命令安装基础编译工具链、PCL 点云开发库以及 Nav2 导航栈等系统与 ROS 依赖：
+#### 2.1.1 Setup Environment
+- 安装 [Docker](https://docs.docker.com/engine/install/)
+- 允许 Docker Container 访问宿主机 X11 显示：
+  ```bash
+  xhost +local:docker
+  ```
 
+#### 2.1.2 Create Container
+运行 Docker 容器（预构建镜像）：
 ```bash
-sudo apt update && sudo apt install -y \
-  build-essential cmake git python3-colcon-common-extensions \
-  python3-venv python3-pip libeigen3-dev libpcl-dev pcl-tools \
-  libgl1 libglfw3 ros-humble-desktop ros-humble-navigation2 \
-  ros-humble-nav2-bringup ros-humble-pcl-ros ros-humble-pcl-conversions \
-  ros-humble-sensor-msgs-py ros-humble-tf2-ros-py
+docker run -it --rm --name slam_simulation \
+  --network host \
+  --privileged \
+  -e "DISPLAY=$DISPLAY" \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v /dev:/dev \
+  ghcr.io/wrenink/slam_simulation:latest
 ```
 
-### 2.3 克隆代码仓库 (Clone Repository)
-从 GitHub 克隆本项目源码并进入仓库根目录：
+> **本地构建镜像（可选）**：
+> 若从源码构建 Docker 镜像，可在项目根目录下运行：
+> ```bash
+> docker build -t slam_simulation:latest .
+> docker run -it --rm --name slam_simulation \
+>   --network host \
+>   --privileged \
+>   -e "DISPLAY=$DISPLAY" \
+>   -v /tmp/.X11-unix:/tmp/.X11-unix \
+>   -v /dev:/dev \
+>   slam_simulation:latest
+> ```
 
+---
+
+### 2.2 Option 2: Build From Source
+
+#### 2.2.1 Setup Environment
+- **操作系统**：Ubuntu 22.04 LTS
+- **ROS**：[ROS 2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
+- **Python**：Python 3.10
+- **安装系统与 ROS 2 依赖**：
+  ```bash
+  sudo apt update && sudo apt install -y \
+    build-essential cmake git python3-colcon-common-extensions \
+    python3-venv python3-pip libeigen3-dev libpcl-dev pcl-tools \
+    libgl1 libglfw3 ros-humble-desktop ros-humble-navigation2 \
+    ros-humble-nav2-bringup ros-humble-pcl-ros ros-humble-pcl-conversions \
+    ros-humble-sensor-msgs-py ros-humble-tf2-ros-py
+  ```
+
+#### 2.2.2 Create Workspace
+创建/克隆工作空间并进入目录：
 ```bash
-# 克隆仓库
 git clone https://github.com/WrenInk/slam_simulation.git
-
-# 进入项目主目录
 cd slam_simulation
 ```
 
-> [!NOTE]
-> 本仓库已内置适配好的 FAST-LIO2、Livox-SDK2 与大疆官方驱动源码（Vendored Sources），克隆后无需额外递归拉取第三方子模块或手动打补丁。
+**下载先验点云**：
+先验点云用于 ICP 全局多角度重定位与 Nav2 代价地图基准。
+本项目已在 `maps/` 目录下内置了默认仿真场景的先验点云与栅格地图（`map.pcd`、`map.pgm` 与 `map.yaml`），开箱即用，无需额外前往网盘下载即可直接进行导航。
+在建图模式下退出时，亦会自动将当前全局累积点云导出并转换覆盖到 `maps/` 目录。
 
-### 2.4 一键构建工作空间 (Build Workspace)
-项目内置了全自动构建脚本 `scripts/build.sh`，执行时将自动完成：
-1. 创建专属的 Python 隔离虚拟环境（`.venv/`），并安装所需科学计算依赖（`mujoco==3.3.7`, `open3d==0.19.0`, `gtsam==4.2` 等）；
-2. 编译并本地安装 C++ `Livox-SDK2` 底层驱动库至 `.deps/`；
-3. 执行 `colcon build --symlink-install` 编译 ROS 2 核心功能包（`FAST_LIO`, `livox_ros_driver2`, `nav_stack`）；
-4. 自动运行单元测试验证物理仿真与算法逻辑。
-
-赋予脚本执行权限并启动一键构建：
+#### 2.2.3 Build
+运行项目内置的一键构建脚本：
 ```bash
 chmod +x scripts/*.sh
 ./scripts/build.sh
 ```
 
-构建成功后将自动执行测试，看到如下输出即表示全部模块就绪：
+构建成功后将自动执行单元测试验证物理仿真与算法逻辑，看到以下输出即表示完成：
 ```text
 Summary: 3 packages finished
 3 passed in 1.82s
 ```
 
-> [!TIP]
-> 构建脚本在内部使用了 `--symlink-install` 参数，这意味着后续修改 Python 脚本、Launch 启动文件或 YAML 配置文件后，**无需反复重新编译**，直接重新启动脚本即可生效。
+> [!NOTE]
+> 推荐使用 `--symlink-install` 选项来构建你的工作空间（`./scripts/build.sh` 脚本已内置该选项），因为 `slam_simulation` 广泛使用了 `launch.py` 文件和 YAML 配置文件。这个构建参数会为那些非编译的源文件使用符号链接，这意味着当你调整参数文件时，不需要反复重建，只需要重新启动即可。
 
-### 2.5 快速运行验证 (Quick Verification)
-所有运行脚本均已内置环境加载逻辑（自动加载 ROS 2 与工作空间环境变量），无需手动执行 `source install/setup.bash`。
+---
 
-你可以通过以下任一方式快速验证部署效果：
+### 2.3 Running
 
-- **方式一：可视化实时建图与全向键盘遥控（推荐初次体验）**
-  - **终端 1（启动仿真与建图）**：
+可使用以下命令启动，在 RViz 中使用 `Nav2 Goal` 插件发布目标点。
+所有启动脚本均已内置环境加载逻辑（自动导入 ROS 2 与本地工作空间配置）。
+
+#### 2.3.1 仿真运行模式
+
+**单机器人：**
+
+- **建图模式 (Mapping Mode)**：
+  - **终端 1 启动仿真底盘与 FAST-LIO2 建图**：
     ```bash
     ./scripts/mapping.sh
+    # 或使用 ROS 2 Launch 格式：
+    # ros2 launch nav_stack mapping.launch.py
     ```
-  - **终端 2（启动键盘遥控）**：
+    自动启动 MuJoCo 仿真底盘、纯 FAST-LIO2 算法（10 Hz 高频配准）、实时地图管理节点与 RViz2（青色为实时扫描点云，彩色为全局累积地图）。
+  - **终端 2 启动全向键盘遥控**：
     ```bash
     ./scripts/teleop.sh
     ```
-    使用 `W/A/S/D/Q/E` 控制小车在仿真场地中全向平移与旋转建图。按 `Ctrl+C` 退出建图时会自动持久化生成 `maps/map.pcd` 与 `maps/map.pgm`。
+  - **保存栅格与点云地图**：
+    在终端 1 按 `Ctrl + C` 退出建图，系统将自动将当前全局点云写入 `maps/map.pcd`，同时自动转换为 2D 占据栅格地图 `maps/map.pgm` 与 `maps/map.yaml`。
+    *(亦可随时使用 Nav2 命令行手动保存：`ros2 run nav2_map_server map_saver_cli -f maps/<YOUR_MAP_NAME>`)*
 
-- **方式二：自动化无头闭环导航测试（CI/服务器首选）**
-  ```bash
-  ./scripts/test_navigation.sh
-  ```
-  该脚本无需图形界面，自动在后台运行物理仿真、建图、ICP 重定位与 Nav2 路径导航闭环，验证软硬件链路正常。
+- **导航模式 (Navigation Mode)**：
+  - **终端启动先验地图 ICP 重定位与 Nav2 自主导航**：
+    ```bash
+    ./scripts/navigation.sh
+    # 或使用 ROS 2 Launch 格式：
+    # ros2 launch nav_stack navigation.launch.py map:=maps/map.yaml pcd:=maps/map.pcd
+    ```
+    等待终端提示 `Navigation: active` 并在 RViz 中看到先验点云与栅格地图后，点击 RViz 顶栏的 **`Nav2 Goal`** 并在地图可行走区域点击拖出目标位姿箭头，全向麦轮底盘即可平滑避障抵达目标。
 
----
-
-## 3. Running
-
-所有功能均提供了封装脚本，内部自动加载环境变量，开箱即用。
-
-### 3.1 纯 FAST-LIO2 建图模式 (Mapping Mode)
-
-* **步骤 1：终端 1 启动建图与物理仿真**
-  ```bash
-  ./scripts/mapping.sh
-  ```
-  - 自动启动 MuJoCo 仿真底盘、纯 FAST-LIO2 算法（10 Hz 高频配准）、实时地图管理节点与 RViz2；
-  - **RViz 画面指引**：青色点云为 10 Hz 零延迟实时扫描点云，彩色为全局累积地图。
-
-* **步骤 2：终端 2 启动全向键盘遥控**
-  ```bash
-  ./scripts/teleop.sh
-  ```
-  使用 `W/A/S/D/Q/E` 控制机器人环游场地一圈进行建图。
-
-* **步骤 3：保存地图并退出**
-  建图完成后，在 **终端 1 按 `Ctrl + C`**：
-  系统自动截获信号并将当前全局点云写入 `maps/map.pcd`，同时自动转换为 2D 占据栅格地图 `maps/map.pgm` 与 `maps/map.yaml`。
-
----
-
-### 3.2 全向键盘遥控 (Teleop Keyboard)
+#### 2.3.2 全向键盘遥控操作
 
 专门针对四轮麦克纳姆轮底盘设计的全向控制程序：
 
@@ -252,7 +264,7 @@ Summary: 3 packages finished
 | 按键 | 功能说明 | 控制效果 |
 | :---: | :--- | :--- |
 | **`W` / `S`** | 纵向平移 | 前进 / 后退 |
-| **`A` / `D`** | 横向平移 | 向左横移 / 向右横移（麦轮全向移动） |
+| **`A` / `D`** | 横向平移 | 向左横移 / 向右横移（麦轮全向平移） |
 | **`Q` / `E`** | 航向旋转 | 原地逆时针旋转 / 原地顺时针旋转 |
 | **`Space`** 或 **`K`** | 急停刹车 | 底盘平移与自转速度瞬间归零 |
 | **`1` / `2` / `3`** | 速度挡位 | 切换 低速 (0.15 m/s)、中速 (0.30 m/s)、高速 (0.45 m/s) |
@@ -260,80 +272,43 @@ Summary: 3 packages finished
 | **`I` / `M`** | 微调角速度 | 每次增减 10% 转向角速度 |
 | **`Tab`** | 模式切换 | 在**按住保持模式**（松开停车）与**巡航锁定模式**（松手保持当前速度）之间切换 |
 
----
+#### 2.3.3 自动化测试与辅助工具
 
-### 3.3 先验 PCD 地图自主导航 (Prior Map Navigation)
-
-使用建图生成的 `maps/map.pcd` 作为先验地图进行全局定位与 Nav2 自主导航：
-
-* **步骤 1：启动导航节点与物理仿真**
+- **自动化无头导航验收 (Headless Test)**：
   ```bash
-  ./scripts/navigation.sh
+  ./scripts/test_navigation.sh
   ```
-  - 自动加载 `maps/map.pcd` 与 `maps/map.yaml`；
-  - 启动底盘动力学仿真与纯 FAST-LIO2 里程计；
-  - `localizer_node` 载入先验 PCD，自动执行多角度全局粗匹配与精细 ICP 优化，广播 `map -> odom` 坐标变换；
-  - RViz2 自动打开，展示先验点云与栅格地图，等待 Nav2 全局规划器与局部控制器初始化。
+  适用于 CI 环境或无显示器服务器，后台静默启动物理仿真、FAST-LIO2、ICP 重定位与 Nav2 航点到达闭环验证。
 
-* **步骤 2：下发全向导航目标点**
-  - 待 RViz 顶部面板显示 `Navigation: active` 后，在 RViz 上方点击 **`Nav2 Goal`**；
-  - 在地图上任意障碍物空隙处点击并拖出期望的目标朝向箭头；
-  - 观察底盘启动自主规划并使用麦轮全向特性（前后左右自由斜移+旋转）平滑避障抵达目标点。
+- **手动重定位演示模式 (Manual Relocalization Demo)**：
+  ```bash
+  ./scripts/relocalize.sh
+  ```
+  测试底盘在除原点外的任意位置启动时的错位状态，并通过 RViz 的 `2D Pose Estimate` 工具手动下发粗位姿，验证粗精 ICP 瞬时对齐吸附至真实位姿。
 
----
+- **交互式 3D PCD 点云查看器 (PCD Viewer)**：
+  ```bash
+  # 查看默认建图结果 maps/map.pcd
+  ./scripts/view_pcd.sh
 
-### 3.4 手动重定位演示模式 (Manual Relocalization Demo)
+  # 查看指定路径的 PCD 点云
+  ./scripts/view_pcd.sh path/to/any_map.pcd
+  ```
+  基于 Open3D 构建，支持高程伪彩着色、世界坐标轴、点云尺寸统计与鼠标旋转缩放漫游。
 
-专用于演示底盘在**除建图起点外的任意非原点位置启动**下的初始错位状态，以及通过 RViz 手动触发高精度 ICP 吸附对齐：
-
-```bash
-./scripts/relocalize.sh
-```
-
-- **初始错位对比（直观纯净）**：
-  - 底盘默认在场地中心开阔位置（物理坐标 $x=-2.0, y=0.0$）生成；
-  - 专属 RViz 界面**仅展示 2D 占据栅格地图**与**荧光青色 10 Hz 实时点云 (`/cloud_registered`)**，无任何其他视觉干扰；
-  - 此时可清晰观察到实时点云与栅格地图墙壁完全错开分离。
-- **手动触发重定位 (2D Pose Estimate)**：
-  1. 在 RViz 顶栏直接点击 **`2D Pose Estimate`** 工具；
-  2. 在地图上根据机器人当前实际所在区域点击并拖动出朝向箭头；
-  3. **实时点云吸附**：多角度粗精 ICP 瞬时收敛（残差 $< 0.001\text{ m}$，重合度 $100\%$），青色实时点云瞬间吸附卡入地图墙壁中！
-- **退出演示**：按 `Ctrl + C` 安全退出。
+- **离线 PCD 转 2D 栅格地图工具 (PCD to Grid)**：
+  ```bash
+  python3 scripts/pcd_to_grid.py --pcd maps/map.pcd --resolution 0.05
+  ```
+  脱离 ROS 节点将任意 PCD 点云快速转换为 Nav2 占据栅格地图（`.pgm` 与 `.yaml`）。
 
 ---
 
-### 3.5 交互式 3D PCD 点云查看器 (PCD Viewer)
-
-基于 Open3D 构建的独立点云查看器，自带空间几何尺寸统计与自适应高程伪彩着色：
-
-```bash
-# 查看默认建图结果 maps/map.pcd
-./scripts/view_pcd.sh
-
-# 查看指定路径的 PCD 点云
-./scripts/view_pcd.sh path/to/any_map.pcd
-```
-
-* **界面快捷键**：鼠标左键旋转视角、右键平移、滚轮缩放、`+`/`-` 放大缩小点大小、`R` 键重置视角、`Q`/`Esc` 退出。
-* **终端信息统计**：运行时自动打印文件大小、点云总数、X/Y/Z 物理跨度长宽高与空间质心。
-
----
-
-### 3.6 离线 PCD 转 2D 栅格地图工具 (PCD to Grid)
-
-脱离 ROS 节点将任意 PCD 点云文件快速转换为 2D Nav2 占据栅格地图：
-
-```bash
-python3 scripts/pcd_to_grid.py --pcd maps/map.pcd --resolution 0.05
-```
-
----
-
-## 4. Launch & Script Arguments
+## 3. Launch & Script Arguments
 
 所有带参数的运行脚本均遵循标准的参数规范。以下为详尽参数速查字典：
 
-### 4.1 建图脚本参数 (`mapping.sh`)
+### 3.1 建图脚本参数 (`mapping.sh`)
 
 **指令语法**：
 ```bash
@@ -350,7 +325,7 @@ python3 scripts/pcd_to_grid.py --pcd maps/map.pcd --resolution 0.05
 
 ---
 
-### 4.2 导航脚本参数 (`navigation.sh`)
+### 3.2 导航脚本参数 (`navigation.sh`)
 
 **指令语法**：
 ```bash
@@ -370,7 +345,7 @@ python3 scripts/pcd_to_grid.py --pcd maps/map.pcd --resolution 0.05
 
 ---
 
-### 4.3 手动重定位脚本参数 (`relocalize.sh`)
+### 3.3 手动重定位脚本参数 (`relocalize.sh`)
 
 **指令语法**：
 ```bash
@@ -390,7 +365,7 @@ python3 scripts/pcd_to_grid.py --pcd maps/map.pcd --resolution 0.05
 
 ---
 
-### 4.4 点云查看器参数 (`view_pcd.sh`)
+### 3.4 点云查看器参数 (`view_pcd.sh`)
 
 **指令语法**：
 ```bash
@@ -408,7 +383,7 @@ python3 scripts/pcd_to_grid.py --pcd maps/map.pcd --resolution 0.05
 
 ---
 
-### 4.5 离线栅格转换参数 (`pcd_to_grid.py`)
+### 3.5 离线栅格转换参数 (`pcd_to_grid.py`)
 
 **指令语法**：
 ```bash
@@ -426,7 +401,7 @@ python3 scripts/pcd_to_grid.py [--pcd <路径>] [--output-dir <路径>] [--resol
 
 ---
 
-### 4.6 键盘遥控参数 (`teleop.sh`)
+### 3.6 键盘遥控参数 (`teleop.sh`)
 
 **指令语法**：
 ```bash
@@ -439,7 +414,7 @@ python3 scripts/pcd_to_grid.py [--pcd <路径>] [--output-dir <路径>] [--resol
 
 ---
 
-## 5. Third-Party Code & Licensing
+## 4. Third-Party Code & Licensing
 
 本项目严格遵循开源许可规范，所有开源软件与源码引用说明如下（详见 [`THIRD_PARTY.md`](file:///home/xiaocheng/slam_study/THIRD_PARTY.md)）：
 
@@ -451,7 +426,7 @@ python3 scripts/pcd_to_grid.py [--pcd <路径>] [--output-dir <路径>] [--resol
 
 ---
 
-## 6. Troubleshooting & FAQ
+## 5. Troubleshooting & FAQ
 
 #### Q1: 运行图形界面时报错 `GLSL link warning` 或出现黑屏？
 * **原因**：部分双显卡笔记本（或虚拟机/Wayland 环境）OpenGL 硬件加速兼容性问题。
