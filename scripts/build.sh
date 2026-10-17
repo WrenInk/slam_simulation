@@ -18,6 +18,9 @@ fi
 cmake -S third_party/Livox-SDK2 -B build/livox_sdk -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$SLAM_STUDY_ROOT/.deps"
 cmake --build build/livox_sdk -j2
 cmake --install build/livox_sdk
+if [ ! -f "src/livox_ros_driver2/package.xml" ]; then
+    cp -f "src/livox_ros_driver2/package_ROS2.xml" "src/livox_ros_driver2/package.xml"
+fi
 export MAKEFLAGS=-j1 CMAKE_BUILD_PARALLEL_LEVEL=1
 colcon build --base-paths src --executor sequential --symlink-install --cmake-args \
     -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
