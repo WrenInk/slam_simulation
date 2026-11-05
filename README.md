@@ -1,11 +1,11 @@
 # slam_simulation
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
 [![ROS 2](https://img.shields.io/badge/ROS%202-Humble-orange.svg)](https://docs.ros.org/en/humble/)
 [![MuJoCo](https://img.shields.io/badge/MuJoCo-3.3.7-brightgreen.svg)](https://mujoco.org/)
 [![FAST-LIO2](https://img.shields.io/badge/Odometry-FAST--LIO2-green.svg)](https://github.com/hku-mars/FAST_LIO)
 
-基于 **ROS 2 Humble** 与 **MuJoCo 物理引擎** 的大疆 Livox Mid-360 麦克纳姆轮全向底盘建图与自主导航完整方案。包含物理级仿真底盘、纯 FAST-LIO2 高频激光惯性里程计、先验 PCD 点云多角度粗精 ICP 重定位、Nav2（SmacPlanner2D + MPPI Omni）全向避障导航与交互式 3D PCD 点云查看器。
+基于 **ROS 2 Humble** 与 **MuJoCo 物理引擎** 的 Livox Mid-360 麦克纳姆轮全向底盘建图与自主导航项目。包含物理仿真底盘、FAST-LIO2 激光惯性里程计、先验 PCD 点云多角度粗精 ICP 重定位、Nav2（SmacPlanner2D + MPPI Omni）全向避障导航与交互式 3D PCD 点云查看器。
 
 ---
 
@@ -13,7 +13,7 @@
 - [1. Overview (系统架构与设计)](#1-overview)
   - [1.1 核心架构与功能](#11-核心架构与功能)
   - [1.2 坐标变换体系 (TF Tree)](#12-坐标变换体系-tf-tree)
-  - [1.3 激光雷达视场角与盲区设计](#13-激光雷达视场角与盲区设计)
+  - [1.3 激光雷达视场角](#13-激光雷达视场角)
   - [1.4 路径规划与全向控制](#14-路径规划与全向控制)
   - [1.5 仓库文件结构](#15-仓库文件结构)
 - [2. Quick Start (快速上手)](#2-quick-start)
@@ -30,9 +30,8 @@
   - [3.3 手动重定位脚本参数 (`relocalize.sh`)](#33-手动重定位脚本参数-relocalizesh)
   - [3.4 点云查看器参数 (`view_pcd.sh`)](#34-点云查看器参数-view_pcdsh)
   - [3.5 离线栅格转换参数 (`pcd_to_grid.py`)](#35-离线栅格转换参数-pcd_to_gridpy)
-  - [3.6 键盘遥控参数 (`teleop.sh`)](#36-键盘遥控参数-teleopsh)
+  - [3.6 键盘遥控速度挡位 (`teleop.sh`)](#36-键盘遥控速度挡位-teleopsh)
 - [4. Third-Party Code & Licensing (第三方开源依赖)](#4-third-party-code--licensing)
-- [5. Troubleshooting & FAQ (补充调试指南)](#5-troubleshooting--faq)
 
 ---
 
@@ -44,56 +43,60 @@ flowchart LR
     B -->|"/cloud_registered (10Hz)<br>/Odometry"| C["fastlio_map_node<br>(实时地图管理)"]
     C -->|"退出自动保存"| D["maps/map.pcd<br>maps/map.pgm<br>maps/map.yaml"]
     D -->|先验基准载入| E["localizer_node<br>(多角度粗精 ICP 重定位)"]
-    B -->|高频里程计| E
+    B -->|里程计| E
     E -->|"map -> odom (TF)<br>/map"| F["Nav2 导航栈<br>(SmacPlanner2D + MPPI Omni)"]
     F -->|"/cmd_vel"| A
 ```
 
 ### 1.1 核心架构与功能
-1. **物理动力学仿真**：MuJoCo 仿真底盘包含四轮麦克纳姆轮等效辊子切向力动力学模型与真实滑动摩擦阻尼，激光雷达采用大疆官方非重复扫描线矩阵（24,000 点/帧序列）进行实时光束投射；
-2. **纯 FAST-LIO2 建图**：采用 FAST-LIO2 的 10 Hz 高频配准输出；
-3. **闭环地图自动持久化**：建图进程退出时自动将内存点云导出为 `maps/map.pcd`，并自动调用坡度/阶梯地面地形分类算法输出 2D 占据栅格地图 `maps/map.pgm` 与 `maps/map.yaml`；
-4. **先验地图全局重定位**：导航时通过先验 PCD 进行全局多角度粗匹配与精细 ICP 对齐，实时更新 `map -> odom` 坐标漂移；
+
+1. **物理动力学仿真**：MuJoCo 仿真底盘包含四轮麦克纳姆轮等效辊子切向力动力学模型与滑动摩擦阻尼。激光雷达复用第三方 Mid-360 扫描方向表，原始序列按 24,000 个采样位置分帧；当前启动配置每帧投射 12,000 条射线，有效返回点数还取决于遮挡和量程；
+2. **FAST-LIO2 建图**：采用 10 Hz 雷达扫描驱动激光惯性配准，`fastlio_map_node` 累积配准后的点云；当前启动流程未启用回环检测或位姿图优化；
+3. **地图自动持久化**：建图进程正常退出时将内存点云导出为 `maps/map.pcd`，并调用坡度/阶梯地面地形分类算法输出 2D 占据栅格地图 `maps/map.pgm` 与 `maps/map.yaml`；
+4. **先验地图重定位**：导航时在初始位置估计附近尝试多个航向角，通过粗精 ICP 与先验 PCD 对齐，更新 `map -> odom`。匹配依赖初值、点云重合度与场景特征，不进行全地图位置遍历；
 5. **全向运动规划**：Nav2 配备 SmacPlanner2D 全局规划器与 MPPI Omni 局部控制器，支持机器人任意方向平移与边走边转。
 
 ---
 
 ### 1.2 坐标变换体系 (TF Tree)
 
-本项目严格规范了传感器系、机器人本体系、里程计系与全局地图系之间的坐标变换逻辑：
+主要坐标系关系如下，箭头表示父坐标系到子坐标系的变换：
 
 ```mermaid
 flowchart TD
     map["map (全局地图坐标系)"]
     odom["odom (FAST-LIO2 局部里程计原点)"]
-    base_footprint["base_footprint (底盘在地面投影点, Z=0)"]
-    base_link["base_link (底盘几何中心, Z=0.075m)"]
-    imu_link["imu_link (IMU 测量中心, Z=0.15m)"]
+    base_footprint["base_footprint (保留底盘位置，仅保留偏航角)"]
+    base_link["base_link (底盘参考坐标系)"]
+    imu_link["imu_link (IMU 坐标系)"]
     lidar_link["lidar_link (Mid-360 激光雷达光学中心)"]
 
-    map -->|"建图: 静态单位阵 / 导航: ICP 重定位动态发布"| odom
-    odom -->|"FAST-LIO2 里程计 (/odom)"| base_footprint
-    base_footprint -->|"固定高度偏移 0.075m"| base_link
-    base_link -->|"立柱安装高度 0.15m"| imu_link
+    map -->|"建图: 恒等变换 / 导航: ICP 修正"| odom
+    odom -->|"bridge_node: 平面姿态"| base_footprint
+    odom -->|"bridge_node: 完整底盘位姿"| base_link
+    base_link -->|"固定安装偏移 (0, 0, 0.15m)"| imu_link
     imu_link -->|"固定外参 (Identity)"| lidar_link
 ```
 
-- **建图模式**：`fastlio_map_node` 广播静态变换 `map -> odom`，`bridge_node` 根据 FAST-LIO2 状态发布 `odom -> base_footprint` 与 `base_link`；
-- **导航模式**：`localizer_node` 通过 ICP 算法计算小车当前在先验地图中的绝对位姿，动态高频修正并发布 `map -> odom` TF，消除长距离累积漂移。
+- **建图模式**：`fastlio_map_node` 在初始化时静态发布恒等变换 `map -> odom`，之后周期性动态刷新同一变换；在线建图导航模式也使用这个关系。
+- **已有地图导航与重定位模式**：`localizer_node` 根据 ICP 匹配结果更新 `map -> odom`，以 20 Hz 发布 TF。匹配成功时可修正里程计相对先验地图的偏差。
+- **底盘位姿**：FAST-LIO2 发布 `/Odometry` 消息，`bridge_node` 将 IMU 位姿换算成底盘位姿，再分别发布 `odom -> base_link` 和 `odom -> base_footprint`。两者位置 xyz 相同；后者只保留偏航角，不强制将 z 设为零。`/odom` 是给导航使用的里程计话题。
+- **机器人内部关系**：[`omni_mid360.urdf`](src/nav_stack/urdf/omni_mid360.urdf) 定义底盘、支架、IMU、雷达和轮子的连接。`robot_state_publisher` 读取它，将固定连接发布到 `/tf_static`，结合 `/joint_states` 将轮子等可动连接发布到 `/tf`。
+- **配置入口**：完整仿真使用 [`simulation.yaml`](src/nav_stack/config/simulation.yaml)，其中 `publish.tf_en: false` 关闭 FAST-LIO2 自身的 TF 广播，底盘关系由 `bridge_node` 统一发布。单独启动 FAST-LIO2 也须加载参数文件，`mapping.extrinsic_T` 和 `mapping.extrinsic_R` 分别需要 3 个和 9 个有限数值；无效参数会给出错误并终止启动。消息中的 `frame_id` 仅标明数据所属坐标系，不会自动建立 TF 连接。
 
 ---
 
 ### 1.3 激光雷达视场角
 
 Livox Mid-360 采用独特的非重复环形扫描结构：
-- **水平视场 (Horizontal FOV)**： 360度 全方位无盲区
-- **垂直天顶角 (Zenith Angle)**：-7～52度（59度）
+- **水平视场 (Horizontal FOV)**：360 度，实际观测仍受近距盲区与物体遮挡影响。
+- **垂直视场 (Vertical FOV)**：相对水平面约 -7～52 度（59 度）。
 
 ---
 
 ### 1.4 路径规划与全向控制
 
-- **全局路径规划 (Global Planner)**：采用 Nav2 的 `SmacPlanner2D`，支持在连续空间中快速搜索平滑、无碰撞的最优路径；
+- **全局路径规划 (Global Planner)**：采用 Nav2 的 `SmacPlanner2D`，在二维栅格代价地图中搜索路径，并进行平滑处理；
 - **局部轨迹跟踪 (Local Controller)**：采用 `MPPI Omni`（Model Predictive Path Integral 控制器），原生针对四轮麦克纳姆轮的全向速度自由度 $(v_x, v_y, \omega_z)$ 进行采样优化，无需像阿克曼或差速底盘那样先对准车头再前进，支持直行、横移与旋转同步合成。
 
 ---
@@ -113,7 +116,8 @@ Livox Mid-360 采用独特的非重复环形扫描结构：
 │   ├── env.sh                      # 环境变量加载脚本
 │   ├── mapping.sh                  # 纯 FAST-LIO2 建图脚本
 │   ├── navigation.sh               # 先验地图 ICP 重定位与自主导航脚本
-│   ├── relocalize.sh               # 独立手动重定位演示脚本 (非原点出生与错位吸附)
+│   ├── relocalize.sh               # 独立手动重定位演示脚本 (非原点出生与 ICP 匹配)
+│   ├── prior_map_args.sh           # 导航与重定位共用的地图路径解析
 │   ├── teleop.sh                   # 麦轮全向键盘控制启动脚本
 │   ├── teleop_keyboard.py          # 键盘控制核心逻辑
 │   ├── view_pcd.sh                 # 3D PCD 点云交互式查看器启动脚本
@@ -126,7 +130,7 @@ Livox Mid-360 采用独特的非重复环形扫描结构：
 │   ├── livox_ros_driver2/          # 大疆 Livox ROS 2 官方驱动与消息
 │   └── nav_stack/                  # 集成调度、MuJoCo仿真底盘、地形分类与导航配置
 ├── tests/                          # 物理仿真与功能单元测试
-└── third_party/                    # 第三方依赖与 SDK (Livox-SDK2 等)
+└── third_party/                    # 第三方依赖与 SDK，由 COLCON_IGNORE 排除递归扫描
 ```
 
 ---
@@ -136,7 +140,7 @@ Livox Mid-360 采用独特的非重复环形扫描结构：
 ### 2.1 环境要求 (Setup Environment)
 - **操作系统**：Ubuntu 22.04 LTS (x86_64)
 - **ROS 版本**：[ROS 2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html) (Desktop 桌面版)
-- **Python 版本**：Python 3.10+
+- **Python 版本**：Ubuntu 22.04 系统 Python 3.10
 - **安装系统与 ROS 2 依赖**：
   在终端中运行以下命令安装 C++ 编译工具链、PCL 点云开发库以及 Nav2 导航栈等依赖项：
   ```bash
@@ -174,10 +178,19 @@ chmod +x scripts/*.sh
 ```
 
 构建脚本会自动完成：
-1. 创建专属的 Python 隔离虚拟环境（`.venv/`），并安装所需的科学计算依赖（`mujoco==3.3.7`, `open3d==0.19.0`, `gtsam==4.2` 等）；
+1. 使用系统 Python 创建项目虚拟环境（`.venv/`，可访问系统包），并安装所需的科学计算依赖（`mujoco==3.3.7`, `open3d==0.19.0`, `gtsam==4.2` 等）；
 2. 编译并本地安装 C++ `Livox-SDK2` 驱动库至 `.deps/`；
-3. 执行 `colcon build --symlink-install` 编译 ROS 2 核心功能包（`FAST_LIO`, `livox_ros_driver2`, `nav_stack`）；
+3. 执行 `colcon build --base-paths src --symlink-install`，并传入 ROS 版本和 SDK 路径等参数，编译 ROS 2 核心功能包（`fast_lio`、`livox_ros_driver2`、`nav_stack`）；
 4. 自动执行单元测试验证物理动力学与传感器链路。
+
+`third_party/COLCON_IGNORE` 将 SDK 源码和旧 ROS 1 仿真参考包排除在 colcon 的递归扫描之外；SDK 由 `build.sh` 单独编译。首次构建使用上述脚本，以准备 Python 依赖和本地 SDK。
+
+依赖准备完成后，可在仓库根目录增量编译：
+
+```bash
+source scripts/env.sh
+colcon build --symlink-install
+```
 
 > [!NOTE]
 > 推荐使用 `--symlink-install` 选项来构建你的工作空间（`./scripts/build.sh` 脚本已内置该选项），因为 `slam_simulation` 广泛使用了 `launch.py` 文件和 YAML 配置文件。这个构建参数会为那些非编译的源文件使用符号链接，这意味着当你调整参数文件时，不需要反复重建，只需要重新启动即可。
@@ -186,8 +199,14 @@ chmod +x scripts/*.sh
 
 ### 2.4 运行操作 (Running)
 
-可使用以下命令启动，在 RViz 中使用 `Nav2 Goal` 插件发布目标点。
-所有启动脚本均已内置环境加载逻辑（自动导入 ROS 2 与本地工作空间配置）。
+以下命令在仓库根目录执行。导航模式中可在 RViz 使用 `Nav2 Goal` 发布目标点。
+各 `.sh` 启动脚本会自动加载 `scripts/env.sh`。在新终端直接执行 `ros2 launch`、`ros2 run` 或 Python 工具前，先执行：
+
+```bash
+source scripts/env.sh
+```
+
+该脚本加载 ROS 2 和 `install/setup.bash`，把 `.venv` 的 Python 包目录加入 `PYTHONPATH`，设置本地 SDK 动态库搜索路径及 ROS 通信环境。它不会激活虚拟环境或切换 Python 解释器，也无须再单独加载 `install/setup.bash`。执行 `./scripts/build.sh` 不会把脚本内部的环境设置保留到当前终端。
 
 #### 2.4.1 仿真运行模式
 
@@ -197,10 +216,11 @@ chmod +x scripts/*.sh
   - **终端 1 启动仿真底盘与 FAST-LIO2 建图**：
     ```bash
     ./scripts/mapping.sh
-    # 或使用 ROS 2 Launch 格式：
+    # 或在新终端手动加载环境后启动：
+    # source scripts/env.sh
     # ros2 launch nav_stack mapping.launch.py
     ```
-    自动启动 MuJoCo 仿真底盘、纯 FAST-LIO2 算法（10 Hz 高频配准）、实时地图管理节点与 RViz2（青色为实时扫描点云，彩色为全局累积地图）。
+    自动启动 MuJoCo 仿真底盘、FAST-LIO2（10 Hz 雷达扫描）、实时地图管理节点与 RViz2（青色为实时扫描点云，彩色为全局累积地图）。
   - **终端 2 启动全向键盘遥控**：
     
     ```bash
@@ -208,17 +228,20 @@ chmod +x scripts/*.sh
     ```
   - **保存栅格与点云地图**：
     在终端 1 按 `Ctrl + C` 退出建图，系统将自动将当前全局点云写入 `maps/map.pcd`，同时自动转换为 2D 占据栅格地图 `maps/map.pgm` 与 `maps/map.yaml`。
-    *(亦可随时使用 Nav2 命令行手动保存：`ros2 run nav2_map_server map_saver_cli -f maps/<YOUR_MAP_NAME>`)*
+    若要在运行中保存点云与栅格，可在已加载环境的另一个终端执行 `ros2 service call /slam/save_map std_srvs/srv/Trigger '{}'`。`ros2 run nav2_map_server map_saver_cli -f maps/<YOUR_MAP_NAME>` 仅保存 `/map` 中的二维栅格，不保存 PCD。
   
 - **导航模式 (Navigation Mode)**：
   
   - **终端启动先验地图 ICP 重定位与 Nav2 自主导航**：
     ```bash
     ./scripts/navigation.sh
-    # 或使用 ROS 2 Launch 格式：
-    # ros2 launch nav_stack navigation.launch.py map:=maps/map.yaml pcd:=maps/map.pcd
+    # 或在新终端手动加载环境后启动：
+    # source scripts/env.sh
+    # ros2 launch nav_stack navigation.launch.py map_yaml:=maps/map.yaml map_pcd:=maps/map.pcd
     ```
-    等待终端提示 `Navigation: active` 并在 RViz 中看到先验点云与栅格地图后，点击 RViz 顶栏的 **`Nav2 Goal`** 并在地图可行走区域点击拖出目标位姿箭头，全向麦轮底盘即可平滑避障抵达目标。
+    等待 Nav2 激活，并确认实时扫描与先验地图对齐后，点击 RViz 顶栏的 **`Nav2 Goal`**，在可通行区域拖出目标位姿箭头以开始导航。若定位偏差较大，先用 `2D Pose Estimate` 指定大致位置和朝向；`/localization/status` 中的 `localized` 字段可用于查看匹配状态。
+
+- **在线建图导航模式**：运行 `./scripts/omni_navigation.sh`，使用实时生成的地图进行导航，无需先载入已有 PCD。该模式不启用先验地图重定位或回环优化。
 
 #### 2.4.2 全向键盘遥控操作
 
@@ -233,11 +256,10 @@ chmod +x scripts/*.sh
 | **`W` / `S`** | 纵向平移 | 前进 / 后退 |
 | **`A` / `D`** | 横向平移 | 向左横移 / 向右横移（麦轮全向平移） |
 | **`Q` / `E`** | 航向旋转 | 原地逆时针旋转 / 原地顺时针旋转 |
-| **`Space`** 或 **`K`** | 急停刹车 | 底盘平移与自转速度瞬间归零 |
+| **`Space`** 或 **`X`** | 停止指令 | 将平移与旋转速度指令设为零，实际运动由仿真动力学响应 |
 | **`1` / `2` / `3`** | 速度挡位 | 切换 低速 (0.15 m/s)、中速 (0.30 m/s)、高速 (0.45 m/s) |
-| **`U` / `J`** | 微调线速度 | 每次增减 10% 速度上限 |
-| **`I` / `M`** | 微调角速度 | 每次增减 10% 转向角速度 |
-| **`Tab`** | 模式切换 | 在**按住保持模式**（松开停车）与**巡航锁定模式**（松手保持当前速度）之间切换 |
+| **`+` / `-`** | 微调速度 | 同时增减线速度设定值 `0.05 m/s` 和角速度设定值 `0.10 rad/s`，供后续方向键输入使用 |
+| **`M`** | 模式切换 | 在**按住保持模式**（连续 0.35 秒未收到按键时发送停车指令）与**巡航锁定模式**（保持当前指令）之间切换 |
 
 #### 2.4.3 自动化测试与辅助工具
 
@@ -245,13 +267,13 @@ chmod +x scripts/*.sh
   ```bash
   ./scripts/test_navigation.sh
   ```
-  适用于 CI 环境或无显示器服务器，后台静默启动物理仿真、FAST-LIO2、ICP 重定位与 Nav2 航点到达闭环验证。
+  适用于 CI 环境或无显示器服务器，后台启动 `omni_navigation.launch.py`，验证物理仿真、FAST-LIO2、在线地图与 Nav2 的四个目标点导航过程。
 
 - **手动重定位演示模式 (Manual Relocalization Demo)**：
   ```bash
   ./scripts/relocalize.sh
   ```
-  测试底盘在除原点外的任意位置启动时的错位状态，并通过 RViz 的 `2D Pose Estimate` 工具手动下发粗位姿，验证粗精 ICP 瞬时对齐吸附至真实位姿。
+  默认在场景坐标 `(-2.0, 0.0)`、朝向约 30 度处启动。等待传感器数据后，通过 RViz 的 `2D Pose Estimate` 指定地图中的大致位置与朝向，触发多角度粗精 ICP 匹配。出生位置须处于场景内的无碰撞区域；场景坐标与建图得到的 `map` 坐标可能不同。匹配是否成功取决于初值和当前扫描与地图的重合情况。
 
 - **交互式 3D PCD 点云查看器 (PCD Viewer)**：
   ```bash
@@ -265,6 +287,7 @@ chmod +x scripts/*.sh
 
 - **离线 PCD 转 2D 栅格地图工具 (PCD to Grid)**：
   ```bash
+  source scripts/env.sh
   python3 scripts/pcd_to_grid.py --pcd maps/map.pcd --resolution 0.05
   ```
   脱离 ROS 节点将任意 PCD 点云快速转换为 Nav2 占据栅格地图（`.pgm` 与 `.yaml`）。
@@ -288,7 +311,7 @@ chmod +x scripts/*.sh
 | **`rviz`** | bool | `true` | 是否启动 RViz2 界面 | • **`true`**：启动 RViz2 观察实时点云与全局地图。<br>• **`false`**：关闭 RViz2 界面（适合远程 SSH 跑图）。 |
 | **`realtime_factor`** | float | `1.0` | 仿真时间流逝倍率 | • **`= 1.0`**：原速真实时间。<br>• **`> 1.0`**（如 `2.0`）：**加速仿真**，缩短建图时间。<br>• **`< 1.0`**（如 `0.5`）：**减速慢动作**，防止低配机器丢步。 |
 | **`map_save_dir`** | string | `maps` | 地图自动导出目录 | 建图结束按 `Ctrl+C` 时，生成的 `map.pcd`、`map.pgm`、`map.yaml` 存放的文件夹路径。 |
-| **`output_dir`** | string | `artifacts/mapping` | 运行日志与轨迹备份目录 | 存放当次运行的评估指标（`metrics.json`）与 TUM 轨迹文件备份。 |
+| **`output_dir`** | string | 脚本：`artifacts/mapping_<时间戳>`；直接 launch：`artifacts/mapping` | 运行产物目录 | `slam/` 子目录保存地图备份、`metrics.json` 和 TUM 轨迹，仿真器也在此目录下保存运行数据。 |
 
 ---
 
@@ -306,9 +329,17 @@ chmod +x scripts/*.sh
 | **`initial_pose_yaw`**| float | `0.0` | 机器人初始估计航向角（弧度） | 弧度值。 |
 | **`gui`** | bool | `true` | 是否开启 MuJoCo 物理窗口 | • **`true`**：开启仿真三维视图；<br>• **`false`**：后台纯动力学推演。 |
 | **`rviz`** | bool | `true` | 是否开启 RViz2 导航操作界面 | • **`true`**：打开 RViz2（含 `Nav2 Goal` 控制面板）；<br>• **`false`**：关闭图形界面。 |
-| **`map_pcd`** | string | `maps/map.pcd` | 先验 3D PCD 点云文件路径 | ICP 全局重定位匹配的环境三维点云基准。 |
+| **`map_pcd`** | string | `maps/map.pcd` | 先验 3D PCD 点云文件路径 | ICP 匹配使用的环境三维点云，应与二维地图使用相同坐标系。 |
 | **`map_yaml`** | string | `maps/map.yaml` | 2D 占据栅格地图配置文件路径 | Nav2 代价地图用于全局规划和避障膨胀的栅格地图。 |
 | **`realtime_factor`** | float | `1.0` | 仿真运行速率倍数 | • **`> 1.0`** 加速仿真，• **`< 1.0`** 减速仿真。 |
+
+自定义地图示例：
+
+```bash
+./scripts/navigation.sh map_pcd:=maps/arena.pcd map_yaml:=maps/arena.yaml
+```
+
+`navigation.sh` 与 `relocalize.sh` 会先解析地图参数，再检查所选文件。只传 `map_pcd` 时，默认使用同目录、同文件名前缀的 `.yaml`，缺失时由定位节点从 PCD 生成；只传 `map_yaml` 时，默认使用同前缀的 `.pcd`。显式指定的 YAML 和所选 PCD 必须存在。直接 `ros2 launch` 使用自定义地图时，请同时传入两个路径。
 
 ---
 
@@ -326,7 +357,7 @@ chmod +x scripts/*.sh
 | **`spawn_yaw`** | float | `0.523` | 仿真初始朝向偏航角（弧度） | 默认约 $30^\circ$ 航向角。 |
 | **`gui`** | bool | `true` | 是否开启 MuJoCo 物理窗口 | • **`true`**：开启仿真三维视图；• **`false`**：后台纯动力学推演。 |
 | **`rviz`** | bool | `true` | 是否开启 RViz2 重定位界面 | • **`true`**：开启专属精简 RViz（仅含实时点云、栅格地图与 `2D Pose Estimate` 工具）。 |
-| **`map_pcd`** | string | `maps/map.pcd` | 先验 3D PCD 点云文件路径 | ICP 全局重定位匹配的环境三维点云基准。 |
+| **`map_pcd`** | string | `maps/map.pcd` | 先验 3D PCD 点云文件路径 | ICP 匹配使用的环境三维点云，应与二维地图使用相同坐标系。 |
 | **`map_yaml`** | string | `maps/map.yaml` | 2D 占据栅格地图配置文件路径 | 视觉对比的 2D 静态栅格地图。 |
 | **`realtime_factor`** | float | `1.0` | 仿真运行速率倍数 | • **`> 1.0`** 加速仿真，• **`< 1.0`** 减速仿真。 |
 
@@ -354,6 +385,7 @@ chmod +x scripts/*.sh
 
 **指令语法**：
 ```bash
+source scripts/env.sh
 python3 scripts/pcd_to_grid.py [--pcd <路径>] [--output-dir <路径>] [--resolution <数值>] [--name <名称>] [--occupied-thresh <数值>] [--free-thresh <数值>]
 ```
 
@@ -361,34 +393,40 @@ python3 scripts/pcd_to_grid.py [--pcd <路径>] [--output-dir <路径>] [--resol
 | :--- | :---: | :--- | :--- |
 | **`--pcd`** | `maps/map.pcd` | 输入的源 PCD 点云文件 | 指定待转换的三维点云源路径。 |
 | **`--output-dir`** | 与 PCD 相同 | 输出文件存放文件夹 | 生成的 `.pgm` 与 `.yaml` 保存路径。 |
-| **`--resolution`** | `0.05` | 栅格地图分辨率（米/像素） | **每个像素代表的物理距离**：<br>• **数值越小**（如 `0.02`）：地图越精细，但图像像素数大、内存与规划开销上升。<br>• **数值越大**（如 `0.10`）：地图越粗糙，但 Nav2 全局寻路计算更快。 |
+| **`--resolution`** | `0.05` | 输出栅格分辨率（米/像素），必须大于零 | 值越小，像素数与内存开销越大。地形分类采用至少 `0.10 m` 的格子，减小输出分辨率不会凭空增加观测细节。 |
 | **`--name`** | `map` | 导出的地图文件前缀 | 自定义输出文件名（如指定 `arena` 则生成 `arena.pgm` 和 `arena.yaml`）。 |
-| **`--occupied-thresh`** | `0.65` | 障碍物判定概率阈值 ($0\sim1$) | **判断为墙壁/障碍物的门限**：<br>• 概率**高于此值**标记为黑色（数值 0，不可通行障碍物）。<br>• **数值调小**（如 `0.50`）：更保守，细小凸起物均判定为障碍。<br>• **数值调大**（如 `0.80`）：滤除地面噪点，避免微小碎点阻挡规划。 |
-| **`--free-thresh`** | `0.25` | 安全空闲判定概率阈值 ($0\sim1$) | **判断为平坦可通行的门限**：<br>• 概率**低于此值**标记为白色（数值 254，完全可行走地面）。<br>• 处于两阈值之间标记为灰色未知区域（数值 205）。 |
+| **`--occupied-thresh`** | `0.65` | 写入 YAML 的图像占据概率上阈值 | 读取地图时，占据概率严格大于此值的像素被解释为障碍。它不控制点云中的坡度、台阶或噪点分类。 |
+| **`--free-thresh`** | `0.196` | 写入 YAML 的图像占据概率下阈值 | 读取地图时，占据概率严格小于此值的像素被解释为空闲；两阈值之间及等于阈值的像素为未知。 |
+
+输出使用 `negate: 0`，按 `占据概率 = 1 - 灰度值 / 255` 读取。默认将障碍、空闲、未知分别编码为 `0`、`254`、`205`，使未知区域在保存和读取后仍为未知。自定义阈值须满足 `0 < free_thresh < occupied_thresh < 1`；编码器会选择符合阈值的灰度，无法用 8 位灰度表示未知区间时会明确报错。
+
+不同分辨率之间按格子的实际覆盖范围重采样，并以障碍、未知、空闲的顺序保守合并。输出像素保持指定的米制尺寸；边缘可向外补齐不足一个像素的范围，不拉伸整个地图。地图 YAML 中的 `origin: [x, y, yaw]` 表示原点位置和绕 z 轴的旋转角（弧度），第三项不是高度。
 
 ---
 
-### 3.6 键盘遥控参数 (`teleop.sh`)
-
-**指令语法**：
+### 3.6 键盘遥控速度挡位 (`teleop.sh`)
 
 ```bash
-./scripts/teleop.sh [--ros-args -p default_gear:=<1/2/3>]
+./scripts/teleop.sh
 ```
 
-| 参数名 | 默认值 | 作用说明 | 选项与数值大小含义 |
-| :--- | :---: | :--- | :--- |
-| **`default_gear`** | `2` | 启动时的默认移动速度挡位 | • **`1`（低速）**：线速度 $0.15\text{ m/s}$，角速度 $0.30\text{ rad/s}$。<br>• **`2`（中速）**：线速度 $0.30\text{ m/s}$，角速度 $0.60\text{ rad/s}$。<br>• **`3`（高速）**：线速度 $0.45\text{ m/s}$，角速度 $0.80\text{ rad/s}$。 |
+启动时使用中速挡，在运行终端按 `1`、`2`、`3` 切换：
+
+| 按键 | 挡位 | 线速度设定值 | 角速度设定值 |
+| :---: | :--- | :---: | :---: |
+| `1` | 低速 | `0.15 m/s` | `0.30 rad/s` |
+| `2` | 中速（启动默认） | `0.30 m/s` | `0.60 rad/s` |
+| `3` | 高速 | `0.45 m/s` | `0.80 rad/s` |
 
 ---
 
 ## 4. Third-Party Code & Licensing
 
-本项目严格遵循开源许可规范，所有开源软件与源码引用说明如下（详见 [`THIRD_PARTY.md`](file:///home/xiaocheng/slam_study/THIRD_PARTY.md)）：
+本项目的开源软件与源码引用说明如下（详见 [`THIRD_PARTY.md`](THIRD_PARTY.md)）：
 
-1. **FAST-LIO2** (GPL-2.0)：香港大学 MARS 实验室开源算法，针对 ROS 2 Humble 进行了深度兼容适配（见 [`patches/fast_lio_ros2.patch`](file:///home/xiaocheng/slam_study/patches/fast_lio_ros2.patch)）；
-2. **Livox-SDK2 与 livox_ros_driver2** (Apache-2.0 / BSD)：大疆官方驱动与通讯库，已内置于本地编译安装，无需系统级安装；
-3. **LIO-SAM 算法衍生** (BSD-3-Clause)：算法参考用于 [`pose_graph.py`](file:///home/xiaocheng/slam_study/src/nav_stack/nav_stack/pose_graph.py)，保留为备用因子图模块；
+1. **FAST-LIO2** (GPL-2.0)：香港大学 MARS 实验室开源算法，包含 ROS 2 Humble 适配（见 [`patches/fast_lio_ros2.patch`](patches/fast_lio_ros2.patch)）；
+2. **Livox-SDK2 与 livox_ros_driver2**：Livox 官方驱动与通信库，主要代码使用 MIT 许可，随附依赖保留各自条款（见 [SDK 许可](third_party/Livox-SDK2/LICENSE.txt) 与 [驱动许可](src/livox_ros_driver2/LICENSE.txt)）；构建脚本将 SDK 安装到本地 `.deps/`；
+3. **LIO-SAM 算法衍生** (BSD-3-Clause)：算法参考用于 [`pose_graph.py`](src/nav_stack/nav_stack/pose_graph.py)，保留为备用因子图模块，当前启动流程未使用；
 4. **Nav2 (Navigation 2)** (Apache-2.0)：官方自主导航框架，使用 SmacPlanner2D 与 MPPI Omni 控制器；
 5. **MuJoCo** (Apache-2.0)：Google DeepMind 开源物理引擎，负责麦轮牵引力与非重复激光射线扫描仿真。
 

@@ -7,6 +7,9 @@ remain obstacles. Unobserved cells remain unknown beyond a bounded sampling gap.
 from dataclasses import dataclass, fields
 import numpy as np
 from scipy import ndimage
+from .map_io import (DEFAULT_FREE_THRESH, DEFAULT_OCCUPIED_THRESH,
+                     resample_occupancy, save_occupancy_map,
+                     validate_resolution, validate_thresholds)
 
 
 @dataclass
@@ -106,7 +109,7 @@ def classify(points, cfg=None):
     cfg = cfg or TerrainConfig()
     points = np.asarray(points)
     points = points[np.isfinite(points).all(axis=1)]
-    r = cfg.terrain_resolution
+    r = validate_resolution(cfg.terrain_resolution)
     if not len(points):
         return TerrainGrid(np.zeros(2), r, np.full((0, 0), -1, np.int8),
                            np.zeros((0, 0)), np.zeros((0, 0)))
@@ -215,13 +218,16 @@ def classify(points, cfg=None):
 
 
 def pcd_to_occupancy(pcd_path, output_dir=None, resolution=0.05, name='map',
-                      occupied_thresh=0.65, free_thresh=0.25):
+                      occupied_thresh=DEFAULT_OCCUPIED_THRESH,
+                      free_thresh=DEFAULT_FREE_THRESH):
     """Convert a 3D PCD point cloud into 2D Nav2 Occupancy Grid Map (.yaml + .pgm)."""
     from pathlib import Path
-    from PIL import Image
-    import yaml
     from .geometry import read_pcd
 
+    resolution = validate_resolution(resolution)
+    validate_thresholds(free_thresh, occupied_thresh)
+    if not name or name in ('.', '..') or Path(name).name != name:
+        raise ValueError('name must be a filename stem without directory components')
     pcd_path = Path(pcd_path).resolve()
     if not pcd_path.is_file():
         raise FileNotFoundError(f"PCD file not found: {pcd_path}")
@@ -231,24 +237,8 @@ def pcd_to_occupancy(pcd_path, output_dir=None, resolution=0.05, name='map',
     points = read_pcd(pcd_path)
     terrain_res = max(resolution, 0.10)
     terrain = classify(points, TerrainConfig(terrain_resolution=terrain_res))
-    scale = max(1, int(round(terrain.resolution / resolution)))
-    grid = np.repeat(np.repeat(terrain.occupancy, scale, axis=0), scale, axis=1)
-    origin = terrain.origin  # [min_x, min_y]
-    height, width = grid.shape
-
-    image = np.where(grid < 0, 205, np.where(grid > 50, 0, 254)).astype(np.uint8)
-    pgm_path = output_dir / f"{name}.pgm"
-    yaml_path = output_dir / f"{name}.yaml"
-
-    Image.fromarray(np.flipud(image)).save(pgm_path)
-    yaml_content = {
-        'image': f"{name}.pgm",
-        'resolution': float(resolution),
-        'origin': [float(origin[0]), float(origin[1]), 0.0],
-        'negate': 0,
-        'occupied_thresh': float(occupied_thresh),
-        'free_thresh': float(free_thresh)
-    }
-    yaml_path.write_text(yaml.safe_dump(yaml_content, sort_keys=False))
-    return yaml_path, pgm_path
+    grid = resample_occupancy(terrain.occupancy, terrain.resolution, resolution)
+    return save_occupancy_map(grid, resolution, [*terrain.origin, 0.0],
+                              output_dir / f'{name}.yaml',
+                              occupied_thresh=occupied_thresh, free_thresh=free_thresh)
 

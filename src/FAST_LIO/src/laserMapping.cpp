@@ -39,6 +39,9 @@
 #include <fstream>
 #include <csignal>
 #include <chrono>
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
 #include <unistd.h>
 #include <Python.h>
 #include <so3_math.h>
@@ -867,6 +870,20 @@ public:
         this->get_parameter_or<vector<double>>("mapping.extrinsic_T", extrinT, vector<double>());
         this->get_parameter_or<vector<double>>("mapping.extrinsic_R", extrinR, vector<double>());
 
+        const auto validate_extrinsic = [](const vector<double>& values,
+                                           size_t expected, const char* name) {
+            if (values.size() != expected ||
+                !std::all_of(values.begin(), values.end(),
+                             [](double value) { return std::isfinite(value); }))
+            {
+                throw std::invalid_argument(std::string(name) + " must contain exactly " +
+                    std::to_string(expected) + " finite values; load a complete FAST-LIO "
+                    "parameter file with --ros-args --params-file <path>.");
+            }
+        };
+        validate_extrinsic(extrinT, 3, "mapping.extrinsic_T");
+        validate_extrinsic(extrinR, 9, "mapping.extrinsic_R");
+
         RCLCPP_INFO(this->get_logger(), "p_pre->lidar_type %d", p_pre->lidar_type);
 
         path.header.stamp = this->get_clock()->now();
@@ -900,19 +917,16 @@ public:
         fill(epsi, epsi+23, 0.001);
         kf.init_dyn_share(get_f, df_dx, df_dw, h_share_model, NUM_MAX_ITERATIONS, epsi);
 
-        /*** debug record ***/
-        // FILE *fp;
-        string pos_log_dir = root_dir + "/Log/pos_log.txt";
-        fp = fopen(pos_log_dir.c_str(),"w");
-
-        // ofstream fout_pre, fout_out, fout_dbg;
-        fout_pre.open(DEBUG_FILE_DIR("mat_pre.txt"),ios::out);
-        fout_out.open(DEBUG_FILE_DIR("mat_out.txt"),ios::out);
-        fout_dbg.open(DEBUG_FILE_DIR("dbg.txt"),ios::out);
-        if (fout_pre && fout_out)
-            cout << "~~~~"<<ROOT_DIR<<" file opened" << endl;
-        else
-            cout << "~~~~"<<ROOT_DIR<<" doesn't exist" << endl;
+        if (runtime_pos_log)
+        {
+            string pos_log_dir = root_dir + "/Log/pos_log.txt";
+            fp = fopen(pos_log_dir.c_str(), "w");
+            if (!fp)
+                throw std::runtime_error("Cannot open runtime log: " + pos_log_dir);
+            fout_pre.open(DEBUG_FILE_DIR("mat_pre.txt"), ios::out);
+            fout_out.open(DEBUG_FILE_DIR("mat_out.txt"), ios::out);
+            fout_dbg.open(DEBUG_FILE_DIR("dbg.txt"), ios::out);
+        }
 
         /*** ROS subscribe initialization ***/
         if (p_pre->lidar_type == AVIA)
@@ -948,7 +962,7 @@ public:
     {
         fout_out.close();
         fout_pre.close();
-        fclose(fp);
+        if (fp) fclose(fp);
     }
 
 private:
@@ -1147,18 +1161,26 @@ private:
     bool flg_EKF_converged, EKF_stop_flg = 0;
     double epsi[23] = {0.001};
 
-    FILE *fp;
+    FILE *fp = nullptr;
     ofstream fout_pre, fout_out, fout_dbg;
 };
 
 int main(int argc, char** argv)
 {
-    rclcpp::init(argc, argv);
+    try
+    {
+        rclcpp::init(argc, argv);
 
-    // rclcpp::init installs a deferred signal handler. Calling shutdown()
-    // directly inside a POSIX handler can deadlock when SIGINT interrupts DDS.
-
-    rclcpp::spin(std::make_shared<LaserMappingNode>());
+        // rclcpp::init installs a deferred signal handler. Calling shutdown()
+        // directly inside a POSIX handler can deadlock when SIGINT interrupts DDS.
+        rclcpp::spin(std::make_shared<LaserMappingNode>());
+    }
+    catch (const std::exception& error)
+    {
+        RCLCPP_ERROR(rclcpp::get_logger("fastlio_mapping"), "%s", error.what());
+        if (rclcpp::ok()) rclcpp::shutdown();
+        return 1;
+    }
 
     if (rclcpp::ok())
         rclcpp::shutdown();
@@ -1180,6 +1202,12 @@ int main(int argc, char** argv)
         FILE *fp2;
         string log_dir = root_dir + "/Log/fast_lio_time_log.csv";
         fp2 = fopen(log_dir.c_str(),"w");
+        if (!fp2)
+        {
+            RCLCPP_ERROR(rclcpp::get_logger("fastlio_mapping"),
+                         "Cannot open runtime log: %s", log_dir.c_str());
+            return 1;
+        }
         fprintf(fp2,"time_stamp, total time, scan point size, incremental time, search time, delete size, delete time, tree size st, tree size end, add point size, preprocess time\n");
         for (int i = 0;i<time_log_counter; i++){
             fprintf(fp2,"%0.8f,%0.8f,%d,%0.8f,%0.8f,%d,%0.8f,%d,%d,%d,%0.8f\n",T1[i],s_plot[i],int(s_plot2[i]),s_plot3[i],s_plot4[i],int(s_plot5[i]),s_plot6[i],int(s_plot7[i]),int(s_plot8[i]), int(s_plot10[i]), s_plot11[i]);

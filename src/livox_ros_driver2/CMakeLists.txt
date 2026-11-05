@@ -191,6 +191,10 @@ else(ROS_EDITION STREQUAL "ROS2")
   cmake_minimum_required(VERSION 3.14)
   project(livox_ros_driver2)
 
+  if(NOT DISTRO_ROS)
+    set(DISTRO_ROS "$ENV{ROS_DISTRO}")
+  endif()
+
   # Default to C99
   if(NOT CMAKE_C_STANDARD)
     set(CMAKE_C_STANDARD 99)
@@ -246,11 +250,17 @@ else(ROS_EDITION STREQUAL "ROS2")
   )
 
   ## make sure the livox_lidar_sdk_shared library is installed
-  find_library(LIVOX_LIDAR_SDK_LIBRARY liblivox_lidar_sdk_shared.so /usr/local/lib REQUIRED)
+  get_filename_component(SLAM_STUDY_SDK_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../.deps" ABSOLUTE)
+  find_library(LIVOX_LIDAR_SDK_LIBRARY
+    NAMES livox_lidar_sdk_shared
+    HINTS "${SLAM_STUDY_SDK_PREFIX}/lib"
+    PATHS /usr/local/lib
+    REQUIRED)
 
   ##
   find_path(LIVOX_LIDAR_SDK_INCLUDE_DIR
     NAMES "livox_lidar_api.h" "livox_lidar_def.h"
+    HINTS "${SLAM_STUDY_SDK_PREFIX}/include"
     REQUIRED)
 
   ## PCL library

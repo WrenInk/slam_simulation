@@ -126,7 +126,7 @@ def main():
             and results[2].get('max_detour_y_m',0) > .65)
         report = dict(passed=bool(passed), error=error, goals=results,
             streams={k:v for k,v in state.items() if k!='truth'},
-            localization='MID360-like rays + measured IMU -> FAST-LIO2 -> LIO-SAM-style factor graph; no truth feedback',
+            localization='MID360-like rays + simulated IMU -> FAST-LIO2 -> accumulated point-cloud map; no truth feedback',
             navigation='Nav2 SmacPlanner2D + MPPI Omni + velocity smoother',
             dynamics='Free chassis; equivalent mecanum roller traction, not a calibrated full roller model')
         (args.output/'navigation.json').write_text(json.dumps(report, indent=2))

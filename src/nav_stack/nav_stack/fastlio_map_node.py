@@ -26,6 +26,7 @@ from tf2_ros import StaticTransformBroadcaster, TransformBroadcaster
 from .geometry import voxelize, write_pcd, matrix, inverse
 from .ros_utils import xyz, cloud_msg, seconds, tf_msg, stamp, to_pose, from_pose
 from .terrain import TerrainConfig, classify, clear_unknown_footprints, pcd_to_occupancy
+from .map_io import resample_occupancy
 
 
 class FastLioMapNode(Node):
@@ -120,8 +121,7 @@ class FastLioMapNode(Node):
         if not len(cloud):
             return out
         terrain = classify(cloud, self.terrain)
-        scale = max(1, int(round(terrain.resolution / self.map_resolution)))
-        grid = np.repeat(np.repeat(terrain.occupancy, scale, axis=0), scale, axis=1)
+        grid = resample_occupancy(terrain.occupancy, terrain.resolution, self.map_resolution)
         lo = terrain.origin
         wh = [grid.shape[1], grid.shape[0]]
 
@@ -193,16 +193,18 @@ class FastLioMapNode(Node):
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             self.map_save_dir.mkdir(parents=True, exist_ok=True)
+            same_directory = self.output_dir.samefile(self.map_save_dir)
 
             # 1. Save PCD map
             pcd_file = self.output_dir / 'map.pcd'
             write_pcd(pcd_file, cloud)
             target_pcd = self.map_save_dir / 'map.pcd'
-            shutil.copyfile(pcd_file, target_pcd)
+            if not same_directory:
+                shutil.copyfile(pcd_file, target_pcd)
 
             # 2. Convert PCD to 2D Occupancy Grid map (.yaml + .pgm)
             pcd_to_occupancy(target_pcd, self.map_save_dir, resolution=self.map_resolution)
-            if self.map_save_dir != self.output_dir:
+            if not same_directory:
                 try:
                     for ext in ['pgm', 'yaml']:
                         if (self.map_save_dir / f'map.{ext}').exists():

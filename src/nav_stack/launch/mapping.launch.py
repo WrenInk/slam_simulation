@@ -1,4 +1,4 @@
-"""Mapping Mode: MuJoCo chassis, FAST-LIO2, pose graph backend, and auto-save on shutdown."""
+"""Mapping Mode: MuJoCo chassis, FAST-LIO2, accumulated map, and auto-save on shutdown."""
 from pathlib import Path
 import yaml
 from ament_index_python.packages import get_package_share_directory

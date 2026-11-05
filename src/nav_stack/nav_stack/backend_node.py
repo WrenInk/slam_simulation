@@ -17,6 +17,7 @@ from .pose_graph import PoseGraph, GraphConfig
 from .ros_utils import seconds, stamp, from_pose, to_pose, tf_msg, xyz, cloud_msg
 from .geometry import write_pcd, matrix, inverse
 from .terrain import TerrainConfig, classify
+from .map_io import resample_occupancy, save_occupancy_map
 
 
 class Backend(Node):
@@ -79,10 +80,7 @@ class Backend(Node):
         if not len(cloud):
             return out
         terrain = classify(cloud, self.terrain)
-        scale = int(round(terrain.resolution/self.resolution))
-        if scale < 1 or not np.isclose(scale*self.resolution, terrain.resolution):
-            raise ValueError('terrain_resolution must be an integer multiple of map_resolution')
-        grid = np.repeat(np.repeat(terrain.occupancy, scale, axis=0), scale, axis=1)
+        grid = resample_occupancy(terrain.occupancy, terrain.resolution, self.resolution)
         lo = terrain.origin
         wh = [grid.shape[1], grid.shape[0]]
         # Fill only unknown cells under the observed robot footprint. Measured
@@ -137,15 +135,10 @@ class Backend(Node):
             (self.output/'metrics.json').write_text(json.dumps(summary, indent=2))
             grid = self.occupancy(cloud)
             if grid.info.width:
-                from PIL import Image
-                import yaml
                 a = np.array(grid.data).reshape(grid.info.height, grid.info.width)
-                image = np.where(a<0, 205, np.where(a>50, 0, 254)).astype('uint8')
-                Image.fromarray(np.flipud(image)).save(self.output/'map.pgm')
-                (self.output/'map.yaml').write_text(yaml.safe_dump(dict(image='map.pgm',
-                    resolution=grid.info.resolution,
-                    origin=[grid.info.origin.position.x, grid.info.origin.position.y, 0.],
-                    negate=0, occupied_thresh=0.65, free_thresh=0.25)))
+                save_occupancy_map(a, grid.info.resolution,
+                    [grid.info.origin.position.x, grid.info.origin.position.y, 0.],
+                    self.output/'map.yaml')
             if self.map_save_dir:
                 try:
                     target_dir = Path(self.map_save_dir).resolve()
@@ -153,7 +146,7 @@ class Backend(Node):
                     import shutil
                     for fname in ['map.pcd', 'map.pgm', 'map.yaml', 'map.npz']:
                         f_src = self.output / fname
-                        if f_src.is_file():
+                        if f_src.is_file() and f_src.resolve() != (target_dir / fname).resolve():
                             shutil.copy2(f_src, target_dir / fname)
                     print(f'已同步保存至标准地图目录：{target_dir}', flush=True)
                 except Exception as copy_exc:

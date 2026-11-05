@@ -8,8 +8,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import json
 import numpy as np
-from PIL import Image
-import yaml
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy
@@ -24,28 +22,22 @@ from scipy.spatial.transform import Rotation
 
 from .geometry import icp, inverse, transform, voxelize, read_pcd
 from .ros_utils import xyz, from_pose, to_pose, tf_msg, cloud_msg, seconds
+from .map_io import load_occupancy_map, resample_occupancy, save_occupancy_map
 
 
 def load_grid_from_yaml(yaml_path):
-    yaml_path = Path(yaml_path).resolve()
-    cfg = yaml.safe_load(yaml_path.read_text())
-    image_path = yaml_path.parent / cfg['image']
-    pgm = np.flipud(np.asarray(Image.open(image_path).convert('L')))
-    occupancy = (pgm / 255.) if cfg.get('negate', 0) else (1. - pgm / 255.)
-    values = np.full(pgm.shape, -1, np.int8)
-    values[occupancy < cfg.get('free_thresh', 0.25)] = 0
-    values[occupancy > cfg.get('occupied_thresh', 0.65)] = 100
+    values, resolution, origin = load_occupancy_map(yaml_path)
 
     grid = OccupancyGrid()
     grid.header.frame_id = 'map'
-    grid.info.resolution = float(cfg['resolution'])
-    grid.info.width = int(pgm.shape[1])
-    grid.info.height = int(pgm.shape[0])
-    origin = cfg['origin']
+    grid.info.resolution = resolution
+    grid.info.width = int(values.shape[1])
+    grid.info.height = int(values.shape[0])
     grid.info.origin.position.x = float(origin[0])
     grid.info.origin.position.y = float(origin[1])
-    grid.info.origin.position.z = float(origin[2]) if len(origin) > 2 else 0.0
-    grid.info.origin.orientation.w = 1.0
+    grid.info.origin.position.z = 0.0
+    grid.info.origin.orientation.z = float(np.sin(origin[2]/2))
+    grid.info.origin.orientation.w = float(np.cos(origin[2]/2))
     grid.data = values.ravel().tolist()
     return grid
 
@@ -80,17 +72,8 @@ class PriorMapLocalizer(Node):
             self.get_logger().info("未找到预置 map.yaml，从 PCD 自动计算生成占据栅格...")
             from nav_stack.terrain import classify, TerrainConfig
             terrain = classify(raw_points, TerrainConfig(terrain_resolution=0.10))
-            scale = 2
-            grid_data = np.repeat(np.repeat(terrain.occupancy, scale, axis=0), scale, axis=1)
-            h, w = grid_data.shape
-            image = np.where(grid_data < 0, 205, np.where(grid_data > 50, 0, 254)).astype(np.uint8)
-            Image.fromarray(np.flipud(image)).save(self.yaml_path.parent / 'map.pgm')
-            cfg_data = {
-                'image': 'map.pgm', 'resolution': 0.05,
-                'origin': [float(terrain.origin[0]), float(terrain.origin[1]), 0.0],
-                'negate': 0, 'occupied_thresh': 0.65, 'free_thresh': 0.25
-            }
-            self.yaml_path.write_text(yaml.safe_dump(cfg_data, sort_keys=False))
+            grid_data = resample_occupancy(terrain.occupancy, terrain.resolution, 0.05)
+            save_occupancy_map(grid_data, 0.05, [*terrain.origin, 0.0], self.yaml_path)
             self.grid = load_grid_from_yaml(self.yaml_path)
 
         # State
